@@ -356,15 +356,11 @@ void main() {
         late final VoidCallback open;
         if (entry == 'continue') {
           open = tester
-              .widget<ListTile>(
-                find.byKey(const ValueKey('continue-watching')),
-              )
+              .widget<ListTile>(find.byKey(const ValueKey('continue-watching')))
               .onTap!;
         } else {
           open = tester
-              .widget<DramaTile>(
-                find.byKey(ValueKey('saved-${first.id}')),
-              )
+              .widget<DramaTile>(find.byKey(ValueKey('saved-${first.id}')))
               .onTap;
         }
         open();
