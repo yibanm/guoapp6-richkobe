@@ -1,4 +1,4 @@
-# 短剧视界开发约定
+# 科比短剧开发约定
 
 ## 项目目标
 
@@ -32,7 +32,17 @@
 
 ## 代码与资料
 
-保持单一 README.md 使用说明，并在其中维护优先级待办与平台验证状态；不要创建零散 docs 文档。AGENTS.md 仅记录开发约定。
+保持单一 README.md 使用说明；版本历史一律写入 CHANGELOG.md，不写进 README；不要创建零散 docs 文档。AGENTS.md 仅记录开发约定。
+
+## 本 fork 的品牌与上游同步约定
+
+本仓库（yibanm/guoapp6-richkobe）是上游 WangXingFan/guoapp 的品牌重制 fork：应用名固定为「科比短剧」，Android 包名 `com.richkobe.shortdrama`，构建单版（全站源），不构建 iOS。
+
+内部数据标识不随品牌改动，以保留既有数据：通知通道 `zhenguojian_downloads`、备份 schema `app: zhenguojian`、下载目录 `zhenguojian-downloads`、Emby 导出 uniqueid `zhenguojian`、MethodChannel `duanju/device`、Go module `duanjuapp`、原生库 `duanju_core`、iOS Bundle Identifier `com.duanju.duanjuApp`。
+
+上游更新只拉取源码：README.md、CHANGELOG.md、AGENTS.md 已在 `.gitattributes` 标记 `merge=ours`。合并上游前必须一次性配置 `git config merge.ours.driver true`（未配置时 merge=ours 会静默失效）；然后 `git fetch upstream && git merge upstream/main`，这三个文档保持本地版本，其余源码正常合并。合并后必须重新核对品牌串（`短剧视界|全剧视界|duanjushijie|quanjushijie`）是否被上游覆盖回来，并确认上游新增源码文件中的旧包名引用。
+
+任务收尾同步一节的 `../guoapp` 镜像机制在上游工作流中使用；本 fork 直接在仓库内开发并提交，不向镜像同步，`finish_task.py` 不在本 fork 执行。
 
 不新增解释性代码注释，必要的编译或工具指令除外。采用清晰命名和模块边界。不要提交密钥、个人配置、下载的视频、SDK 或构建缓存。
 

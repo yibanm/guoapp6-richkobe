@@ -78,7 +78,7 @@ class AndroidBuildRetryTests(unittest.TestCase):
                     fake_process(NETWORK_FAILURE, 1), fake_process('Built app.apk\n', 0)]) as popen, \
                 mock.patch('android_build_retry.time.sleep') as sleep, \
                 mock.patch('sys.stdout', new_callable=io.StringIO) as stdout:
-            run_android_build(command, cwd=temporary, env=environment, edition='quanjushijie')
+            run_android_build(command, cwd=temporary, env=environment, edition='kobedrama')
             self.assertEqual(popen.call_count, 2)
             sleep.assert_called_once_with(10)
             for call in popen.call_args_list:
@@ -99,7 +99,7 @@ class AndroidBuildRetryTests(unittest.TestCase):
                 mock.patch('android_build_retry.time.sleep') as sleep, \
                 mock.patch('sys.stdout', new_callable=io.StringIO):
             for _ in range(2):
-                run_android_build(['flutter'], cwd=temporary, env={}, edition='duanjushijie')
+                run_android_build(['flutter'], cwd=temporary, env={}, edition='kobedrama')
             self.assertEqual(popen.call_count, 2)
             sleep.assert_not_called()
             logs = list((Path(temporary) / 'build/logs/android').glob('*/attempt-1.log'))
@@ -114,7 +114,7 @@ class AndroidBuildRetryTests(unittest.TestCase):
                 mock.patch('sys.stdout', new_callable=io.StringIO), \
                 mock.patch('sys.stderr', new_callable=io.StringIO) as stderr:
             with self.assertRaises(subprocess.CalledProcessError) as raised:
-                run_android_build(['flutter'], cwd=temporary, env={}, edition='duanjushijie')
+                run_android_build(['flutter'], cwd=temporary, env={}, edition='kobedrama')
             self.assertEqual(raised.exception.returncode, 7)
             self.assertEqual(popen.call_count, 3)
             self.assertEqual(sleep.call_args_list, [mock.call(10), mock.call(30)])
@@ -127,7 +127,7 @@ class AndroidBuildRetryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary, \
                 mock.patch('android_build_retry.time.sleep') as sleep, \
                 mock.patch('sys.stdout', new_callable=io.StringIO) as stdout:
-            run_android_build(command, cwd=temporary, env=os.environ.copy(), edition='duanjushijie')
+            run_android_build(command, cwd=temporary, env=os.environ.copy(), edition='kobedrama')
             logs = list((Path(temporary) / 'build/logs/android').glob('*/*.log'))
             self.assertEqual(len(logs), 1)
             output = logs[0].read_text(encoding='utf-8')
@@ -142,7 +142,7 @@ class AndroidBuildRetryTests(unittest.TestCase):
                 mock.patch('sys.stdout', new_callable=io.StringIO), \
                 mock.patch('sys.stderr', new_callable=io.StringIO):
             with self.assertRaises(subprocess.CalledProcessError) as raised:
-                run_android_build(['flutter'], cwd=temporary, env={}, edition='duanjushijie')
+                run_android_build(['flutter'], cwd=temporary, env={}, edition='kobedrama')
             self.assertEqual(raised.exception.returncode, 2)
             popen.assert_called_once()
             sleep.assert_not_called()

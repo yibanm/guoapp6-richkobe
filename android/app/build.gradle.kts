@@ -1,18 +1,9 @@
 import java.util.Properties
-import java.util.Base64
 
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
 }
-
-val dartDefines = providers.gradleProperty("dart-defines").orNull.orEmpty()
-    .split(",").filter { it.isNotEmpty() }
-    .associate {
-        val decoded = String(Base64.getDecoder().decode(it), Charsets.UTF_8)
-        decoded.substringBefore("=") to decoded.substringAfter("=", "")
-    }
-val allSources = dartDefines["ALL_SOURCES"] == "true"
 
 val releaseKey = rootProject.file("key.properties")
 val releaseProperties = Properties()
@@ -21,7 +12,7 @@ if (releaseKey.exists()) {
 }
 
 android {
-    namespace = "com.duanju.duanju_app"
+    namespace = "com.richkobe.shortdrama"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
@@ -31,13 +22,13 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.duanju.duanju_app"
+        applicationId = "com.richkobe.shortdrama"
         minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["appLabel"] = if (allSources) "全剧视界" else "短剧视界"
-        manifestPlaceholders["appBanner"] = if (allSources) "@drawable/tv_banner_all_sources" else "@drawable/tv_banner"
+        manifestPlaceholders["appLabel"] = "科比短剧"
+        manifestPlaceholders["appBanner"] = "@drawable/tv_banner"
     }
 
     signingConfigs {

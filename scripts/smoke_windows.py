@@ -20,7 +20,7 @@ def main():
         raise SystemExit('此检查需要 Windows。')
     version = re.search(r'^version:\s*(\S+)', (root / 'pubspec.yaml').read_text(), re.MULTILINE).group(1)
     package = root / 'dist' / 'windows' / f'{variant.slug}-{version}-windows-x64-portable.zip'
-    with tempfile.TemporaryDirectory(prefix='duanjushijie-smoke-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='kobedrama-smoke-') as temporary:
         directory = Path(temporary)
         with zipfile.ZipFile(package) as archive:
             archive.extractall(directory)

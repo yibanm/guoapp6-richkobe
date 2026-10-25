@@ -24,7 +24,7 @@ def find_inno_compiler():
 
 def package_windows(root, variant, version, output):
     bundle = root / 'build' / 'windows' / 'x64' / 'runner' / 'Release'
-    required = ['duanjushijie.exe', 'duanju_core.dll', 'flutter_windows.dll',
+    required = ['kobedrama.exe', 'duanju_core.dll', 'flutter_windows.dll',
                 'libffmpegkit.dll', 'libmpv-2.dll', 'msvcp140.dll',
                 'vcruntime140.dll', 'data/icudtl.dat', 'data/app.so']
     missing = [name for name in required if not (bundle / name).is_file()]
@@ -54,7 +54,7 @@ def package_windows(root, variant, version, output):
         for source in sorted(bundle.rglob('*')):
             if source.is_file():
                 relative = source.relative_to(bundle).as_posix()
-                if relative == 'duanjushijie.exe':
+                if relative == 'kobedrama.exe':
                     relative = variant.slug + '.exe'
                 archive.write(source, relative)
     return [installer, portable]

@@ -18,7 +18,7 @@ class WindowsPackageTests(unittest.TestCase):
         self.output = self.root / 'dist/windows'
         self.files = {
             name: ('synthetic ' + name).encode()
-            for name in ['duanjushijie.exe', 'duanju_core.dll', 'flutter_windows.dll',
+            for name in ['kobedrama.exe', 'duanju_core.dll', 'flutter_windows.dll',
                          'libffmpegkit.dll', 'libmpv-2.dll', 'msvcp140.dll',
                          'vcruntime140.dll', 'vcruntime140_1.dll',
                          'data/icudtl.dat', 'data/app.so',
@@ -51,12 +51,12 @@ class WindowsPackageTests(unittest.TestCase):
                 self.assertEqual(artifacts, [installer, self.output / (prefix + '-portable.zip')])
                 with zipfile.ZipFile(artifacts[1]) as archive:
                     expected = dict(self.files)
-                    expected[variant.slug + '.exe'] = expected.pop('duanjushijie.exe')
+                    expected[variant.slug + '.exe'] = expected.pop('kobedrama.exe')
                     self.assertEqual(set(archive.namelist()), set(expected))
                     self.assertIsNone(archive.testzip())
                     for name, content in expected.items():
                         self.assertEqual(archive.read(name), content)
-                self.assertEqual((self.bundle / 'duanjushijie.exe').read_bytes(), self.files['duanjushijie.exe'])
+                self.assertEqual((self.bundle / 'kobedrama.exe').read_bytes(), self.files['kobedrama.exe'])
 
     def test_incomplete_bundle_stops_before_compilation(self):
         (self.bundle / 'vcruntime140.dll').unlink()
@@ -74,7 +74,7 @@ class WindowsPackageTests(unittest.TestCase):
 
     def test_compiler_failure_does_not_succeed_with_stale_installer(self):
         self.output.mkdir(parents=True)
-        stale = self.output / 'duanjushijie-0.2.61+72-windows-x64-setup.exe'
+        stale = self.output / 'kobedrama-0.2.61+72-windows-x64-setup.exe'
         stale.write_bytes(b'old installer')
         with mock.patch('package_windows.find_inno_compiler', return_value=Path('ISCC.exe')), \
                 mock.patch('package_windows.subprocess.run',
@@ -89,7 +89,7 @@ class WindowsPackageTests(unittest.TestCase):
             with self.subTest(empty=empty):
                 def compile_installer(*args, **kwargs):
                     if empty:
-                        (self.output / 'duanjushijie-0.2.61+72-windows-x64-setup.exe').touch()
+                        (self.output / 'kobedrama-0.2.61+72-windows-x64-setup.exe').touch()
 
                 with mock.patch('package_windows.find_inno_compiler', return_value=Path('ISCC.exe')), \
                         mock.patch('package_windows.subprocess.run', side_effect=compile_installer):

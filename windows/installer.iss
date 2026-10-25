@@ -1,5 +1,5 @@
 [Setup]
-AppId=duanju_app.{#AppSlug}
+AppId=com.richkobe.shortdrama
 AppName={#AppName}
 AppVersion={#AppVersion}
 DefaultDirName={localappdata}\Programs\{#AppSlug}
@@ -19,8 +19,8 @@ CloseApplications=yes
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#BundleDir}\duanjushijie.exe"; DestDir: "{app}"; DestName: "{#AppSlug}.exe"; Flags: ignoreversion
-Source: "{#BundleDir}\*"; DestDir: "{app}"; Excludes: "duanjushijie.exe"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#BundleDir}\kobedrama.exe"; DestDir: "{app}"; DestName: "{#AppSlug}.exe"; Flags: ignoreversion
+Source: "{#BundleDir}\*"; DestDir: "{app}"; Excludes: "kobedrama.exe"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppSlug}.exe"; WorkingDir: "{app}"

@@ -24,6 +24,7 @@ output.mkdir(parents=True, exist_ok=True)
 artifacts = []
 
 if options.platform == 'android':
+    platform_names = {'arm64-v8a': 'android-arm64', 'armeabi-v7a': 'android-arm', 'x86_64': 'android-x64'}
     for abi in options.abi or ['arm64-v8a', 'armeabi-v7a', 'x86_64']:
         source = root / 'build' / 'app' / 'outputs' / 'flutter-apk' / f'app-{abi}-release.apk'
         if not source.is_file():
@@ -35,7 +36,7 @@ if options.platform == 'android':
             missing = set(required) - names
             if missing:
                 raise SystemExit('APK 缺少原生库：' + ', '.join(sorted(missing)))
-        target = output / f'{variant.slug}-{version}-{abi}.apk'
+        target = output / f'{variant.slug}-{version}-{platform_names[abi]}.apk'
         shutil.copy2(source, target)
         artifacts.append(target)
 else:

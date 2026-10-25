@@ -108,7 +108,7 @@ def build_core(simulator=False, variant=BuildVariant()):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='构建短剧视界 / 全剧视界 iOS 核心和应用')
+    parser = argparse.ArgumentParser(description='构建科比短剧 iOS 核心和应用')
     parser.add_argument('--core-only', action='store_true')
     parser.add_argument('--simulator', action='store_true', help='额外生成模拟器核心；不启动模拟器')
     parser.add_argument('--export-options', type=Path, help='使用自己的 Xcode 签名配置导出 IPA')

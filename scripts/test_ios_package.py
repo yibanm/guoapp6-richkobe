@@ -14,17 +14,17 @@ class IosPackageTests(unittest.TestCase):
     def test_signed_artifacts_keep_ipa_extension(self):
         self.assertEqual(
             ios_artifact_name(BuildVariant(), '0.2.11+17', signed=True),
-            'duanjushijie-0.2.11+17-ios.ipa',
+            'kobedrama-0.2.11+17-ios.ipa',
         )
         self.assertEqual(
             ios_artifact_name(BuildVariant(True), '0.2.11+17', signed=True),
-            'quanjushijie-0.2.11+17-ios.ipa',
+            'kobedrama-0.2.11+17-ios.ipa',
         )
 
     def test_unsigned_artifacts_keep_ipa_extension(self):
         self.assertEqual(
             ios_artifact_name(BuildVariant(), '0.2.11+17', signed=False),
-            'duanjushijie-0.2.11+17-ios-unsigned.ipa',
+            'kobedrama-0.2.11+17-ios-unsigned.ipa',
         )
 
     def test_unsigned_ipa_contains_payload_and_frameworks(self):

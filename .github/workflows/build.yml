@@ -10,6 +10,10 @@ on:
         description: Run the full regression suite in addition to builds
         type: boolean
         default: false
+      publish_release:
+        description: Publish a GitHub Release after successful builds (manual release only)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -25,7 +29,6 @@ env:
 
 jobs:
   checks:
-    if: github.event_name == 'pull_request' || inputs.run_checks == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -54,14 +57,6 @@ jobs:
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - edition: duanjushijie
-            arguments: ''
-          - edition: quanjushijie
-            arguments: '--all-sources'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -91,27 +86,20 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      - run: python scripts/build_android.py ${{ matrix.arguments }}
+      - run: python scripts/build_android.py --all-sources
       - name: Remove signing files
         if: always()
         run: python scripts/configure_signing.py --clean
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.edition }}-android
+          name: kobedrama-android
           path: dist/android/*
           if-no-files-found: error
           retention-days: 14
+
   windows:
     runs-on: windows-latest
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - edition: duanjushijie
-            arguments: ''
-          - edition: quanjushijie
-            arguments: '--all-sources'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -152,54 +140,21 @@ jobs:
             throw 'Inno Setup compiler was not installed'
           }
           Split-Path -Parent $compiler | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - run: python scripts/build_windows.py ${{ matrix.arguments }}
+      - run: python scripts/build_windows.py --all-sources
       - if: github.event_name == 'pull_request' || inputs.run_checks == true
         run: choco install ffmpeg --no-progress -y
       - if: github.event_name == 'pull_request' || inputs.run_checks == true
-        run: python scripts/smoke_windows.py ${{ matrix.arguments }}
+        run: python scripts/smoke_windows.py --all-sources
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.edition }}-windows
+          name: kobedrama-windows
           path: dist/windows/*
           if-no-files-found: error
           retention-days: 14
 
-  ios:
-    runs-on: macos-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - edition: duanjushijie
-            arguments: ''
-          - edition: quanjushijie
-            arguments: '--all-sources'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: native/go.mod
-          cache-dependency-path: native/go.sum
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.4'
-          channel: stable
-          cache: true
-      - run: python3 scripts/build_ios.py ${{ matrix.arguments }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.edition }}-ios-unsigned
-          path: dist/ios/*
-          if-no-files-found: error
-          retention-days: 14
-
   release:
-    needs: [android, windows, ios]
-    if: github.event_name != 'pull_request'
+    needs: [android, windows]
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -214,17 +169,29 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Extract release notes for current version
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          awk -v target="## v$version" '
+            $0 == target { found = 1; next }
+            found && /^## v/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "CHANGELOG.md 缺少 v$version 段落" >&2
+            exit 1
+          fi
       - uses: actions/download-artifact@v4
         with:
-          pattern: duanjushijie-*
+          pattern: kobedrama-*
           path: release
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
-          name: 短剧视界 ${{ steps.version.outputs.version }}
+          name: 科比短剧 ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
           files: |
             release/**/*.apk
-            release/**/*.ipa
             release/**/*-windows-x64-portable.zip
             release/**/*-windows-x64-setup.exe
           fail_on_unmatched_files: true

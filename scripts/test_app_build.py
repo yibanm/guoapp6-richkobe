@@ -23,15 +23,15 @@ class AppBuildTests(unittest.TestCase):
         for encoded in ['', dart_defines('ALL_SOURCES=false'), dart_defines('OTHER=true')]:
             variant = BuildVariant.from_dart_defines(encoded)
             self.assertFalse(variant.all_sources)
-            self.assertEqual(variant.name, '短剧视界')
-            self.assertEqual(variant.slug, 'duanjushijie')
+            self.assertEqual(variant.name, '科比短剧')
+            self.assertEqual(variant.slug, 'kobedrama')
 
     def test_full_edition_decodes_among_other_flutter_defines(self):
         variant = BuildVariant.from_dart_defines(dart_defines(
             'OTHER=中文', 'ALL_SOURCES=true', 'VALUE=a=b'))
         self.assertTrue(variant.all_sources)
-        self.assertEqual(variant.name, '全剧视界')
-        self.assertEqual(variant.slug, 'quanjushijie')
+        self.assertEqual(variant.name, '科比短剧')
+        self.assertEqual(variant.slug, 'kobedrama')
 
     def test_ios_branding_can_switch_editions_without_replacing_bundle_identity(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -41,8 +41,8 @@ class AppBuildTests(unittest.TestCase):
             for enabled in [True, False]:
                 configure(path, dart_defines('ALL_SOURCES=' + str(enabled).lower()))
                 actual = plistlib.loads(path.read_bytes())
-                self.assertEqual(actual['CFBundleDisplayName'], '全剧视界' if enabled else '短剧视界')
-                self.assertEqual(actual['CFBundleName'], 'quanjushijie' if enabled else 'duanjushijie')
+                self.assertEqual(actual['CFBundleDisplayName'], '科比短剧')
+                self.assertEqual(actual['CFBundleName'], 'kobedrama')
                 for key, value in original.items():
                     self.assertEqual(actual[key], value)
 
@@ -50,10 +50,10 @@ class AppBuildTests(unittest.TestCase):
     def test_windows_reads_defines_from_flutter_tool_environment(self):
         branding = Path(__file__).resolve().parents[1] / 'windows/runner/app_branding.cmake'
         for flags, expected in [
-            ([], '短剧视界'),
-            (['ALL_SOURCES=true'], '全剧视界'),
-            (['OTHER=true', 'ALL_SOURCES=false'], '短剧视界'),
-            (['ALL_SOURCES=true', 'ALL_SOURCES=false'], '短剧视界'),
+            ([], '科比短剧'),
+            (['ALL_SOURCES=true'], '科比短剧'),
+            (['OTHER=true', 'ALL_SOURCES=false'], '科比短剧'),
+            (['ALL_SOURCES=true', 'ALL_SOURCES=false'], '科比短剧'),
         ]:
             with self.subTest(flags=flags), tempfile.TemporaryDirectory() as temporary:
                 script = Path(temporary) / 'check.cmake'
