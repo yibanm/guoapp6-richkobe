@@ -76,6 +76,21 @@ class AppDevice {
       return fallback;
     }
   }
+
+  static Future<bool> openUrl(String url) async {
+    try {
+      final opened = await channel
+          .invokeMethod<bool>('openUrl', {'url': url})
+          .timeout(const Duration(seconds: 3));
+      return opened == true;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    } on TimeoutException {
+      return false;
+    }
+  }
 }
 
 class AppLayout extends InheritedWidget {

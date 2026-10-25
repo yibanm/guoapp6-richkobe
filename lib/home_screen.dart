@@ -802,20 +802,72 @@ class _HomeScreenState extends State<HomeScreen> {
     } else if (value == 'display') {
       _chooseDisplayMode();
     } else if (value == 'about') {
-      showAboutDialog(
-        context: context,
-        applicationName: appName,
-        applicationVersion: AppLayout.versionOf(context),
-        applicationIcon: Icon(
+      _showAbout();
+    }
+  }
+
+  static const repositoryUrl = 'https://github.com/yibanm/guoapp6-richkobe';
+
+  void _showAbout() {
+    final colors = Theme.of(context).colorScheme;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Icon(
           glassDesign(context)
               ? LucideIcons.circlePlay
               : Icons.play_circle_filled_rounded,
           size: 48,
           color: const Color(0xFFFF765F),
         ),
-        children: [const Text('独立运行，打开即可浏览和播放。观看记录与追剧收藏保存在当前设备。')],
-      );
-    }
+        title: Text(appName, textAlign: TextAlign.center),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              AppLayout.versionOf(context),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            const Text('独立运行，打开即可浏览和播放。观看记录与追剧收藏保存在当前设备。'),
+            const SizedBox(height: 16),
+            FilledButton.tonalIcon(
+              onPressed: () async {
+                final opened = await AppDevice.openUrl(repositoryUrl);
+                if (!opened && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('无法打开浏览器，请手动访问：$repositoryUrl')),
+                  );
+                }
+              },
+              icon: const _GithubMark(size: 20),
+              label: const Text('访问 GitHub 仓库'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '觉得好用的话，去仓库点个 Star 吧',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => showLicensePage(
+              context: context,
+              applicationName: appName,
+              applicationVersion: AppLayout.versionOf(context),
+            ),
+            child: const Text('开源许可'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
   }
 
   static const _tabTitles = ['发现', '追剧', '最近观看', '下载'];
@@ -1807,4 +1859,63 @@ class _HomeScreenState extends State<HomeScreen> {
           _catalogTile(items[index], focusNode: node, onFocus: onFocus),
     );
   }
+}
+
+class _GithubMark extends StatelessWidget {
+  const _GithubMark({this.size = 20});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(
+      painter: _GithubMarkPainter(
+        Theme.of(context).colorScheme.onPrimaryContainer,
+      ),
+    ),
+  );
+}
+
+class _GithubMarkPainter extends CustomPainter {
+  const _GithubMarkPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final unit = size.width / 16;
+    // 简化 octocat 剪影：圆头 + 双耳 + 躯干与尾
+    canvas.drawCircle(Offset(8 * unit, 7 * unit), 6.2 * unit, paint);
+    final ear = Path()
+      ..moveTo(3.2 * unit, 3.6 * unit)
+      ..lineTo(2.4 * unit, 0.6 * unit)
+      ..lineTo(5.6 * unit, 2.2 * unit)
+      ..close();
+    canvas.drawPath(ear, paint);
+    final otherEar = Path()
+      ..moveTo(12.8 * unit, 3.6 * unit)
+      ..lineTo(13.6 * unit, 0.6 * unit)
+      ..lineTo(10.4 * unit, 2.2 * unit)
+      ..close();
+    canvas.drawPath(otherEar, paint);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(4.6 * unit, 9.5 * unit, 6.8 * unit, 6 * unit),
+        Radius.circular(2.4 * unit),
+      ),
+      paint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(9.6 * unit, 12.6 * unit, 4.6 * unit, 2.2 * unit),
+        Radius.circular(1.1 * unit),
+      ),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GithubMarkPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

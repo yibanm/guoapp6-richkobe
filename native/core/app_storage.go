@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -45,6 +46,21 @@ func (engine *nativeEngine) storage() (nativeStorageInfo, error) {
 	return info, nil
 }
 
+func nativeDefaultDownloadRoot() string {
+	switch runtime.GOOS {
+	case "android":
+		return filepath.Join("/storage/emulated/0", "Download", "科比短剧")
+	case "windows":
+		if root, err := nativeWindowsVideosFolder(); err == nil && root != "" {
+			return filepath.Join(root, "科比短剧")
+		}
+		if profile := os.Getenv("USERPROFILE"); profile != "" {
+			return filepath.Join(profile, "Videos", "科比短剧")
+		}
+	}
+	return ""
+}
+
 func nativeDownloadLocation(directory string) string {
 	var value struct {
 		Directory string `json:"directory"`
@@ -52,6 +68,9 @@ func nativeDownloadLocation(directory string) string {
 	body, _ := os.ReadFile(filepath.Join(directory, "download-location.json"))
 	if json.Unmarshal(body, &value) == nil && filepath.IsAbs(value.Directory) {
 		return filepath.Clean(value.Directory)
+	}
+	if root := nativeDefaultDownloadRoot(); root != "" {
+		return root
 	}
 	return filepath.Join(directory, "downloads")
 }

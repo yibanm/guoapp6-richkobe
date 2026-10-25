@@ -140,6 +140,19 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                         "playbackPower" -> result.success(runCatching { playbackPower() }.getOrNull())
+                        "openUrl" -> {
+                            val url = call.argument<String>("url").orEmpty()
+                            val opened = runCatching {
+                                if (url.startsWith("https://") || url.startsWith("http://")) {
+                                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                    true
+                                } else {
+                                    false
+                                }
+                            }.getOrDefault(false)
+                            result.success(opened)
+                        }
                         "systemProxy" -> {
                             val connection = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                             val proxy = connection.defaultProxy

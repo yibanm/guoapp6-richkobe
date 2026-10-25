@@ -880,13 +880,11 @@ class _PlayerControlsState extends State<PlayerControls> {
               : Icons.fit_screen_outlined,
           onPressed: widget.onPageFullscreen,
         ),
-      _toolIcon(
+      _toolButton(
         key: const ValueKey('player-fullscreen'),
         tooltip: widget.windowFullscreen ? '退出窗口全屏' : '窗口全屏',
-        icon: widget.windowFullscreen
-            ? Icons.fullscreen_exit_rounded
-            : Icons.fullscreen_rounded,
         onPressed: widget.onFullscreen,
+        child: _DiagonalFullscreenIcon(expanded: widget.windowFullscreen),
       ),
     ];
     return Padding(
@@ -1156,4 +1154,69 @@ class _PlayerControlsState extends State<PlayerControls> {
       );
     },
   );
+}
+
+class _DiagonalFullscreenIcon extends StatelessWidget {
+  const _DiagonalFullscreenIcon({required this.expanded});
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 22,
+    height: 22,
+    child: CustomPaint(
+      painter: _DiagonalFullscreenPainter(
+        expanded: expanded,
+        color: Colors.white.withValues(alpha: .92),
+      ),
+    ),
+  );
+}
+
+class _DiagonalFullscreenPainter extends CustomPainter {
+  const _DiagonalFullscreenPainter({
+    required this.expanded,
+    required this.color,
+  });
+  final bool expanded;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final w = size.width;
+    final h = size.height;
+    // 沿主对角线（左上-右下）布置两个斜三角：展开时朝外角，收拢时朝中心
+    final outerTopLeft = Path()
+      ..moveTo(0, 0)
+      ..lineTo(w * .46, 0)
+      ..lineTo(0, h * .46)
+      ..close();
+    final outerBottomRight = Path()
+      ..moveTo(w, h)
+      ..lineTo(w * .54, h)
+      ..lineTo(w, h * .54)
+      ..close();
+    final innerTopLeft = Path()
+      ..moveTo(w * .18, h * .18)
+      ..lineTo(w * .62, h * .18)
+      ..lineTo(w * .18, h * .62)
+      ..close();
+    final innerBottomRight = Path()
+      ..moveTo(w * .82, h * .82)
+      ..lineTo(w * .38, h * .82)
+      ..lineTo(w * .82, h * .38)
+      ..close();
+    if (expanded) {
+      canvas.drawPath(innerTopLeft, paint);
+      canvas.drawPath(innerBottomRight, paint);
+    } else {
+      canvas.drawPath(outerTopLeft, paint);
+      canvas.drawPath(outerBottomRight, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DiagonalFullscreenPainter oldDelegate) =>
+      oldDelegate.expanded != expanded || oldDelegate.color != color;
 }

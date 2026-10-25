@@ -1,6 +1,7 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <shellapi.h>
 #include <flutter/standard_method_codec.h>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -33,6 +34,37 @@ bool FlutterWindow::OnCreate() {
   device_channel_->SetMethodCallHandler(
       [](const flutter::MethodCall<flutter::EncodableValue>& call,
          std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == "openUrl") {
+          const auto* arguments =
+              std::get_if<flutter::EncodableMap>(call.arguments());
+          std::string url;
+          if (arguments) {
+            auto found = arguments->find(flutter::EncodableValue("url"));
+            if (found != arguments->end()) {
+              if (const auto* value = std::get_if<std::string>(&found->second)) {
+                url = *value;
+              }
+            }
+          }
+          const bool https = url.rfind("https://", 0) == 0 ||
+                             url.rfind("http://", 0) == 0;
+          if (!https) {
+            result->Success(flutter::EncodableValue(false));
+            return;
+          }
+          const int wide = MultiByteToWideChar(CP_UTF8, 0, url.c_str(), -1,
+                                               nullptr, 0);
+          std::wstring target(wide > 0 ? static_cast<size_t>(wide) : 0, L'\0');
+          if (wide > 0) {
+            MultiByteToWideChar(CP_UTF8, 0, url.c_str(), -1, target.data(),
+                                wide);
+          }
+          const HINSTANCE instance = ShellExecuteW(
+              nullptr, L"open", target.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+          result->Success(flutter::EncodableValue(
+              reinterpret_cast<intptr_t>(instance) > 32));
+          return;
+        }
         if (call.method_name() != "playbackPower") {
           result->NotImplemented();
           return;
