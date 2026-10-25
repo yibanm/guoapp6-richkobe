@@ -152,51 +152,6 @@ void main() {
     },
   );
 
-  testWidgets('picture-in-picture hides app overlay controls', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(AppDevice.channel, (call) async {
-      switch (call.method) {
-        case 'pictureInPictureStatus':
-          return {'supported': true, 'active': false};
-        case 'enterPictureInPicture':
-          return {'supported': true, 'active': true, 'requested': true};
-      }
-      return null;
-    });
-    try {
-      final repository = RouteRepository();
-      final player = ScriptedPlayer();
-      await mount(tester, repository, player, size: const Size(390, 844));
-      expect(
-        find.byKey(const ValueKey('player-picture-in-picture')),
-        findsOneWidget,
-      );
-      expect(find.text('选集'), findsOneWidget);
-      expect(find.text('简介'), findsOneWidget);
-      expect(find.text('下载'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('player-picture-in-picture')));
-      await tester.pump();
-      await tester.pump();
-      await settleOperations(tester);
-      expect(
-        find.byKey(const ValueKey('player-picture-in-picture')),
-        findsNothing,
-      );
-      expect(find.byKey(const ValueKey('player-speed')), findsNothing);
-      expect(find.byKey(const ValueKey('player-quality')), findsNothing);
-      expect(find.byKey(const ValueKey('player-progress')), findsNothing);
-      expect(find.text('选集'), findsNothing);
-      expect(find.text('简介'), findsNothing);
-      expect(find.text('下载'), findsNothing);
-      await unmount(tester, player);
-    } finally {
-      messenger.setMockMethodCallHandler(AppDevice.channel, null);
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
   testWidgets('mobile taps toggle controls and double taps toggle playback', (
     tester,
   ) async {
@@ -247,35 +202,19 @@ void main() {
     tester,
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(AppDevice.channel, (call) async {
-      if (call.method == 'pictureInPictureStatus') {
-        return {'supported': true, 'active': false};
-      }
-      return null;
-    });
-    try {
-      final repository = RouteRepository();
-      final player = ScriptedPlayer();
-      await mount(tester, repository, player, size: const Size(390, 844));
-      final speed = tester.getRect(find.byKey(const ValueKey('player-speed')));
-      final quality = tester.getRect(
-        find.byKey(const ValueKey('player-quality')),
-      );
-      final route = tester.getRect(find.byKey(const ValueKey('player-route')));
-      final pip = tester.getRect(
-        find.byKey(const ValueKey('player-picture-in-picture')),
-      );
-      expect(quality.left - speed.right, lessThan(8));
-      expect(route.left - quality.right, lessThan(8));
-      expect(pip.left - route.right, lessThan(8));
-      expect(pip.right, greaterThan(330));
-      await unmount(tester, player);
-    } finally {
-      messenger.setMockMethodCallHandler(AppDevice.channel, null);
-      debugDefaultTargetPlatformOverride = null;
-    }
+    final repository = RouteRepository();
+    final player = ScriptedPlayer();
+    await mount(tester, repository, player, size: const Size(390, 844));
+    final speed = tester.getRect(find.byKey(const ValueKey('player-speed')));
+    final quality = tester.getRect(
+      find.byKey(const ValueKey('player-quality')),
+    );
+    final route = tester.getRect(find.byKey(const ValueKey('player-route')));
+    expect(quality.left - speed.right, lessThan(8));
+    expect(route.left - quality.right, lessThan(8));
+    expect(route.right, greaterThan(300));
+    await unmount(tester, player);
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('holding fast forward hides feedback and controls', (

@@ -25,7 +25,7 @@ artifacts = []
 
 if options.platform == 'android':
     platform_names = {'arm64-v8a': 'android-arm64', 'armeabi-v7a': 'android-arm', 'x86_64': 'android-x64'}
-    for abi in options.abi or ['arm64-v8a', 'armeabi-v7a', 'x86_64']:
+    for abi in options.abi or ['arm64-v8a']:
         source = root / 'build' / 'app' / 'outputs' / 'flutter-apk' / f'app-{abi}-release.apk'
         if not source.is_file():
             raise SystemExit('缺少 APK：' + str(source))

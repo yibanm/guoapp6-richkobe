@@ -91,7 +91,6 @@ class _PlayerScreenState extends State<PlayerScreen>
   Timer? _saveTimer;
   Timer? _healthTimer;
   Timer? _errorTimer;
-  Timer? _pictureInPictureExitTimer;
   Future<void> _operations = Future<void>.value();
   late int _index;
   late final int _profileEpoch;
@@ -118,10 +117,6 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _playIntent = true;
   bool _showControlsOnPlaybackReady = true;
   bool _pendingError = false;
-  bool _pictureInPictureSupported = false;
-  bool _pictureInPictureActive = false;
-  bool _pictureInPictureRequested = false;
-  bool _pictureInPictureHandlerInstalled = false;
   AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
   String _loadingMessage = '正在准备播放';
   String? _error;
@@ -133,12 +128,6 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _rotating = false;
   bool _television = false;
   AppOrientationController? _orientationController;
-  bool get _pictureInPictureVisible =>
-      _pictureInPictureActive || _pictureInPictureRequested;
-  bool get _canUsePictureInPicture =>
-      !_television &&
-      defaultTargetPlatform == TargetPlatform.android &&
-      _pictureInPictureSupported;
   bool get _mobile =>
       !_television &&
       (defaultTargetPlatform == TargetPlatform.android ||
@@ -232,7 +221,6 @@ class _PlayerScreenState extends State<PlayerScreen>
     _playerFocus.addListener(() {
       if (!_playerFocus.hasPrimaryFocus && !_closed) _interactions.cancel();
     });
-    _configurePictureInPicture();
     _subscriptions.add(
       _player.stream.error.listen((error) {
         if (_enhancement.handlePlaybackError(error)) return;
@@ -379,187 +367,6 @@ class _PlayerScreenState extends State<PlayerScreen>
             !widget.store.allowsSource('hongguo'))) {
       _danmaku.setPlan(null);
     }
-  }
-
-  void _configurePictureInPicture() {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
-    _pictureInPictureHandlerInstalled = true;
-    AppDevice.channel.setMethodCallHandler((call) async {
-      if (call.method == 'pictureInPictureChanged') {
-        final arguments = call.arguments;
-        final active = arguments is Map && arguments['active'] == true;
-        _setPictureInPictureStatus(active: active, delayHiddenPause: !active);
-      }
-    });
-    unawaited(_refreshPictureInPictureStatus());
-  }
-
-  Future<void> _refreshPictureInPictureStatus() async {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
-    try {
-      final status = await AppDevice.channel.invokeMapMethod<String, dynamic>(
-        'pictureInPictureStatus',
-      );
-      if (!mounted || _closed) return;
-      _setPictureInPictureStatus(
-        supported: status?['supported'] == true,
-        active: status?['active'] == true,
-      );
-    } on PlatformException {
-      if (mounted && !_closed) {
-        _setPictureInPictureStatus(supported: false, active: false);
-      }
-    } on MissingPluginException {
-      if (mounted && !_closed) {
-        _setPictureInPictureStatus(supported: false, active: false);
-      }
-    }
-  }
-
-  void _setPictureInPictureStatus({
-    bool? supported,
-    bool? active,
-    bool? requested,
-    bool delayHiddenPause = false,
-  }) {
-    final nextSupported = supported ?? _pictureInPictureSupported;
-    final nextActive = active ?? _pictureInPictureActive;
-    final nextRequested =
-        requested ?? (nextActive ? false : _pictureInPictureRequested);
-    void assign() {
-      _pictureInPictureSupported = nextSupported;
-      _pictureInPictureActive = nextActive;
-      _pictureInPictureRequested = nextRequested;
-    }
-
-    if (mounted && !_closed) {
-      setState(assign);
-    } else {
-      assign();
-    }
-    if (_pictureInPictureVisible ||
-        _lifecycleState == AppLifecycleState.resumed) {
-      _pictureInPictureExitTimer?.cancel();
-      _applyLifecycleVisibility(pauseWhenHidden: false);
-      return;
-    }
-    _pictureInPictureExitTimer?.cancel();
-    _applyLifecycleVisibility(pauseWhenHidden: !delayHiddenPause);
-    if (delayHiddenPause) {
-      _pictureInPictureExitTimer = Timer(const Duration(milliseconds: 700), () {
-        if (!_closed &&
-            !_pictureInPictureVisible &&
-            _lifecycleState != AppLifecycleState.resumed) {
-          _applyLifecycleVisibility();
-        }
-      });
-    }
-  }
-
-  void _applyLifecycleVisibility({bool pauseWhenHidden = true}) {
-    final windowsInactive =
-        Platform.isWindows && _lifecycleState == AppLifecycleState.inactive;
-    final visible =
-        _lifecycleState == AppLifecycleState.resumed ||
-        windowsInactive ||
-        _pictureInPictureVisible;
-    _foreground = visible;
-    _enhancement.setForeground(_foreground);
-    _syncDanmaku();
-    _syncPreload();
-    _health.reset();
-    if (!visible) _interactions.cancel();
-    if (pauseWhenHidden &&
-        !visible &&
-        (_lifecycleState == AppLifecycleState.paused ||
-            _lifecycleState == AppLifecycleState.hidden)) {
-      _playIntent = false;
-      unawaited(_player.pause());
-      unawaited(_saveProgress(flush: true));
-    }
-    if (visible && _pendingError) {
-      _queueRecovery();
-    }
-  }
-
-  Future<void> _enterPictureInPicture() async {
-    if (!_canUsePictureInPicture ||
-        _closed ||
-        _loading ||
-        _error != null ||
-        _panelOpen) {
-      return;
-    }
-    _interactions.cancel();
-    final rawRatio = _aspectRatio.isFinite && _aspectRatio > 0
-        ? _aspectRatio
-        : 16 / 9;
-    final ratio = rawRatio.clamp(1 / 2.39, 2.39).toDouble();
-    final width = ratio >= 1 ? (1000 * ratio).round() : 1000;
-    final height = ratio >= 1 ? 1000 : (1000 / ratio).round();
-    _setPictureInPictureStatus(requested: true);
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || _closed) return;
-    final sourceRect = _pictureInPictureSourceRect();
-    final arguments = <String, int>{'width': width, 'height': height};
-    if (sourceRect != null) arguments.addAll(sourceRect);
-    try {
-      final status = await AppDevice.channel.invokeMapMethod<String, dynamic>(
-        'enterPictureInPicture',
-        arguments,
-      );
-      if (!mounted || _closed) return;
-      final supported = status?['supported'] == true;
-      final active = status?['active'] == true;
-      final requested = status?['requested'] == true;
-      _setPictureInPictureStatus(
-        supported: supported,
-        active: active,
-        requested: requested && !active,
-      );
-      if (!supported || (!active && !requested)) {
-        _notice('当前设备不支持画中画');
-      } else if (requested && !active) {
-        _pictureInPictureExitTimer?.cancel();
-        _pictureInPictureExitTimer = Timer(const Duration(seconds: 2), () {
-          if (!_closed &&
-              _pictureInPictureRequested &&
-              !_pictureInPictureActive) {
-            _setPictureInPictureStatus(requested: false);
-          }
-        });
-      }
-    } on PlatformException {
-      _setPictureInPictureStatus(requested: false);
-      _notice('无法进入画中画，请检查系统权限');
-    } on MissingPluginException {
-      _setPictureInPictureStatus(supported: false, requested: false);
-      _notice('当前平台不支持画中画');
-    }
-  }
-
-  Map<String, int>? _pictureInPictureSourceRect() {
-    final paneContext = _videoPaneKey.currentContext;
-    final renderObject = paneContext?.findRenderObject();
-    if (paneContext == null ||
-        renderObject is! RenderBox ||
-        !renderObject.hasSize) {
-      return null;
-    }
-    final topLeft = renderObject.localToGlobal(Offset.zero);
-    final size = renderObject.size;
-    final ratio =
-        MediaQuery.maybeOf(paneContext)?.devicePixelRatio ??
-        View.of(paneContext).devicePixelRatio;
-    final left = (topLeft.dx * ratio).round().clamp(0, 100000);
-    final top = (topLeft.dy * ratio).round().clamp(0, 100000);
-    final right = ((topLeft.dx + size.width) * ratio).round().clamp(0, 100000);
-    final bottom = ((topLeft.dy + size.height) * ratio).round().clamp(
-      0,
-      100000,
-    );
-    if (right <= left || bottom <= top) return null;
-    return {'left': left, 'top': top, 'right': right, 'bottom': bottom};
   }
 
   void _attachLanPlayback() {
@@ -1559,10 +1366,6 @@ class _PlayerScreenState extends State<PlayerScreen>
     _saveTimer?.cancel();
     _healthTimer?.cancel();
     _errorTimer?.cancel();
-    _pictureInPictureExitTimer?.cancel();
-    if (_pictureInPictureHandlerInstalled) {
-      AppDevice.channel.setMethodCallHandler(null);
-    }
     _interactions.dispose();
     _playerFocus.dispose();
     _menuRevision.dispose();
@@ -1621,7 +1424,6 @@ class _PlayerScreenState extends State<PlayerScreen>
     final theme = Theme.of(context);
     final title = widget.detail.drama.title;
     final fullscreen = _showFullscreen;
-    final pictureInPicture = _pictureInPictureVisible;
     return PopScope(
       canPop: _television || !fullscreen,
       onPopInvokedWithResult: (didPop, result) {
@@ -1649,10 +1451,10 @@ class _PlayerScreenState extends State<PlayerScreen>
           canRequestFocus: !_television,
           skipTraversal: _television,
           child: Scaffold(
-            backgroundColor: fullscreen || pictureInPicture
+            backgroundColor: fullscreen
                 ? Colors.black
                 : theme.scaffoldBackgroundColor,
-            appBar: pictureInPicture || fullscreen || _mobile
+            appBar: fullscreen || _mobile
                 ? null
                 : AppBar(
                     title: Text(
@@ -1668,62 +1470,61 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                     ],
                   ),
-            body: pictureInPicture
-                ? _videoPane(context)
-                : SafeArea(
-                    top: !_television && (fullscreen || _mobile),
-                    bottom: !fullscreen,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final desktop = constraints.maxWidth >= 840;
-                        if (fullscreen) {
-                          return _videoPane(context);
-                        }
-                        if (desktop ||
-                            constraints.maxWidth >
-                                constraints.maxHeight * 1.3) {
-                          return Row(
-                            children: [
-                              Expanded(child: _videoPane(context)),
-                              if (_episodePanelVisible)
-                                SizedBox(
-                                  width: desktop ? 312 : 210,
-                                  child: _episodePanel(
-                                    onClose: _toggleEpisodePanel,
-                                  ),
-                                ),
-                            ],
-                          );
-                        }
-                        if (_mobile) {
-                          final height = (constraints.maxWidth / _aspectRatio)
-                              .clamp(0.0, constraints.maxHeight * .56);
-                          return Column(
-                            children: [
-                              SizedBox(
-                                height: height,
-                                width: double.infinity,
-                                child: _videoPane(context),
-                              ),
-                              Expanded(child: _mobilePlaybackPanel()),
-                            ],
-                          );
-                        }
-                        final height = (constraints.maxWidth / _aspectRatio)
-                            .clamp(0.0, constraints.maxHeight * .64);
-                        return Column(
-                          children: [
-                            SizedBox(
-                              height: height,
-                              width: double.infinity,
-                              child: _videoPane(context),
-                            ),
-                            Expanded(child: _episodePanel()),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
+            body: SafeArea(
+              top: !_television && (fullscreen || _mobile),
+              bottom: !fullscreen,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final desktop = constraints.maxWidth >= 840;
+                  if (fullscreen) {
+                    return _videoPane(context);
+                  }
+                  if (desktop ||
+                      constraints.maxWidth > constraints.maxHeight * 1.3) {
+                    return Row(
+                      children: [
+                        Expanded(child: _videoPane(context)),
+                        if (_episodePanelVisible)
+                          SizedBox(
+                            width: desktop ? 312 : 210,
+                            child: _episodePanel(onClose: _toggleEpisodePanel),
+                          ),
+                      ],
+                    );
+                  }
+                  if (_mobile) {
+                    final height = (constraints.maxWidth / _aspectRatio).clamp(
+                      0.0,
+                      constraints.maxHeight * .56,
+                    );
+                    return Column(
+                      children: [
+                        SizedBox(
+                          height: height,
+                          width: double.infinity,
+                          child: _videoPane(context),
+                        ),
+                        Expanded(child: _mobilePlaybackPanel()),
+                      ],
+                    );
+                  }
+                  final height = (constraints.maxWidth / _aspectRatio).clamp(
+                    0.0,
+                    constraints.maxHeight * .64,
+                  );
+                  return Column(
+                    children: [
+                      SizedBox(
+                        height: height,
+                        width: double.infinity,
+                        child: _videoPane(context),
+                      ),
+                      Expanded(child: _episodePanel()),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),
@@ -1736,10 +1537,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         : AppTheme.dark;
     final title =
         '${widget.detail.drama.title} · 第 ${widget.detail.episodes[_index].number} 集${_plan?.local == true ? ' · 本地' : ''}${widget.detail.episodes[_index].vip ? ' · VIP 试看' : ''}${(_plan?.routeIndex ?? 0) > 0 ? ' · 线路 ${_plan!.routeIndex + 1}' : ''}';
-    final hideOverlayForPictureInPicture = _pictureInPictureVisible;
-    final Widget controls = hideOverlayForPictureInPicture
-        ? const SizedBox.shrink()
-        : _television
+    final Widget controls = _television
         ? TelevisionControls(
             player: _player,
             title: title,
@@ -1801,9 +1599,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ? _retryDanmakuFromControls
                 : null,
             onPush: widget.mediaId == null ? _pushToDevice : null,
-            onPictureInPicture: _canUsePictureInPicture
-                ? _enterPictureInPicture
-                : null,
             onPrevious: _index > 0
                 ? () => _play(_index - 1, showControlsOnReady: false)
                 : null,
@@ -1814,8 +1609,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final layeredControls = Stack(
       fit: StackFit.expand,
       children: [
-        if (!hideOverlayForPictureInPicture)
-          DanmakuOverlay(controller: _danmaku, aspectRatio: _aspectRatio),
+        DanmakuOverlay(controller: _danmaku, aspectRatio: _aspectRatio),
         controls,
       ],
     );
@@ -1845,7 +1639,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   fit: BoxFit.contain,
                   controls: (_) => layeredControls,
                 ),
-              if (_loading && !hideOverlayForPictureInPicture)
+              if (_loading)
                 ColoredBox(
                   color: Colors.black.withValues(alpha: .78),
                   child: Center(
@@ -1859,7 +1653,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                     ),
                   ),
                 ),
-              if (_error != null && !hideOverlayForPictureInPicture)
+              if (_error != null)
                 ColoredBox(
                   color: Colors.black.withValues(alpha: .9),
                   child: StatusPanel(
@@ -1886,7 +1680,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                   ),
                 ),
               if ((_loading || _error != null) &&
-                  !hideOverlayForPictureInPicture &&
                   _showFullscreen &&
                   !_television)
                 SafeArea(
@@ -1909,7 +1702,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                     ),
                   ),
                 ),
-              if (_saveWarning != null && !hideOverlayForPictureInPicture)
+              if (_saveWarning != null)
                 Positioned(
                   top: 52,
                   left: 12,

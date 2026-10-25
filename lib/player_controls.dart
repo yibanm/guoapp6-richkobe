@@ -41,7 +41,6 @@ class PlayerControls extends StatefulWidget {
     this.onDanmaku,
     this.onRetryDanmaku,
     this.onPush,
-    this.onPictureInPicture,
     this.routeLabel = '',
     this.routeCount = 1,
     this.onRoute,
@@ -78,7 +77,6 @@ class PlayerControls extends StatefulWidget {
   final Future<void> Function()? onDanmaku;
   final Future<void> Function()? onRetryDanmaku;
   final Future<void> Function()? onPush;
-  final Future<void> Function()? onPictureInPicture;
   final String routeLabel;
   final int routeCount;
   final VoidCallback? onRoute;
@@ -862,15 +860,6 @@ class _PlayerControlsState extends State<PlayerControls> {
               ? () => _panel(() => _openVolume(volume))
               : null,
         ),
-      if (widget.onPictureInPicture != null)
-        _toolIcon(
-          key: const ValueKey('player-picture-in-picture'),
-          tooltip: '画中画',
-          icon: Icons.picture_in_picture_alt_rounded,
-          onPressed: widget.enabled
-              ? () => _panel(widget.onPictureInPicture!)
-              : null,
-        ),
       if (widget.onPageFullscreen != null)
         _toolIcon(
           key: const ValueKey('player-page-fullscreen'),
@@ -919,15 +908,6 @@ class _PlayerControlsState extends State<PlayerControls> {
           tooltip: '选集',
           icon: Icons.grid_view_rounded,
           onPressed: widget.enabled ? () => _panel(widget.onEpisodes) : null,
-        ),
-      if (widget.onPictureInPicture != null)
-        _toolIcon(
-          key: const ValueKey('player-picture-in-picture'),
-          tooltip: '画中画',
-          icon: Icons.picture_in_picture_alt_rounded,
-          onPressed: widget.enabled
-              ? () => _panel(widget.onPictureInPicture!)
-              : null,
         ),
     ];
     return Padding(
