@@ -20,6 +20,7 @@ import 'package_smoke.dart';
 import 'lan_controller.dart';
 import 'player_screen.dart';
 import 'video_enhancement_assets.dart';
+import 'webdav_sync.dart';
 
 Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -167,6 +168,7 @@ class _AppBootstrapState extends State<AppBootstrap>
             );
           };
         });
+        unawaited(_autoWebDavSync());
       }
     } catch (failure) {
       if (mounted) {
@@ -175,6 +177,20 @@ class _AppBootstrapState extends State<AppBootstrap>
         });
       }
     }
+  }
+
+  Future<void> _autoWebDavSync() async {
+    final current = store;
+    if (current == null) return;
+    final config = current.webDavConfig;
+    if (!config.configured || !config.autoSync) return;
+    final controller = WebDavSyncController(deviceName: current.deviceId);
+    await controller.sync(
+      config,
+      current.webDavSnapshot(),
+      current.applyWebDavLibrary,
+    );
+    controller.dispose();
   }
 
   @override

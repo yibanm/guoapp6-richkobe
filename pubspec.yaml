@@ -25,6 +25,7 @@ dependencies:
   window_manager: ^0.5.1
   nsd: 5.0.1
   lucide_icons_flutter: 3.1.20
+  webdav_client_plus: ^3.0.0
 
 dev_dependencies:
   flutter_test:

@@ -9,6 +9,7 @@ import 'models.dart';
 import 'playback_preferences.dart';
 import 'download_preferences.dart';
 import 'catalog_sort.dart';
+import 'webdav_sync.dart';
 import 'follow_state.dart';
 import 'hongguo_series.dart';
 import 'lan_sync_models.dart';
@@ -186,6 +187,84 @@ class LocalStore extends ChangeNotifier {
   }
 
   Playability? playabilityOf(String id) => _playability[id];
+
+  WebDavConfig get webDavConfig {
+    if (_configurationError != null) return const WebDavConfig();
+    try {
+      return WebDavConfig.fromJson(
+        Map<String, dynamic>.from(
+          jsonDecode(_string(_key('webdav')) ?? '{}') as Map,
+        ),
+      );
+    } catch (_) {
+      return const WebDavConfig();
+    }
+  }
+
+  String get deviceId {
+    var value = _string('deviceId') ?? '';
+    if (value.isEmpty) {
+      value = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+      _snapshot?.values['deviceId'] = value;
+      _writes = _writes.then(
+        (_) => preferences.setString('deviceId', value),
+        onError: (Object _) => null,
+      );
+    }
+    return value;
+  }
+
+  Future<void> saveWebDavConfig(WebDavConfig config) {
+    final epoch = _epoch;
+    return _queue(() async {
+      if (_configurationError != null || epoch != _epoch) return;
+      await _commit({_key('webdav'): jsonEncode(config.toJson())});
+      _notify();
+    });
+  }
+
+  LibrarySnapshot webDavSnapshot() => (
+    history: history.toList(),
+    favorites: favorites.toList(),
+    followStates: Map.of(_followStates),
+  );
+
+  Future<void> applyWebDavLibrary(WebDavLibrary library) {
+    final epoch = _epoch;
+    return _queue(() async {
+      if (_configurationError != null || epoch != _epoch) return;
+      final history = <String, WatchEntry>{
+        for (final entry in _history.entries) entry.key: entry.value,
+      };
+      for (final entry in library.history) {
+        final existing = history[entry.drama.id];
+        if (existing == null || entry.updatedAt.isAfter(existing.updatedAt)) {
+          history[entry.drama.id] = entry;
+        }
+      }
+      final favorites = <String, Drama>{
+        for (final entry in _favorites.entries) entry.key: entry.value,
+      };
+      for (final drama in library.favorites) {
+        favorites[drama.id] = drama;
+      }
+      final followStates = Map.of(_followStates);
+      for (final entry in library.followStates.entries) {
+        followStates.putIfAbsent(entry.key, () => entry.value);
+      }
+      await _commit({
+        _key('history'): jsonEncode(
+          history.values.map((entry) => entry.toJson()).toList(),
+        ),
+        _key('favorites'): jsonEncode(
+          favorites.values.map((drama) => drama.toJson()).toList(),
+        ),
+        _key('followStates'): _encodeFollowStates(followStates),
+      });
+      _loadLibrary();
+      _notify();
+    });
+  }
 
   Future<void> recordPlayability(String id, Playability value) {
     final epoch = _epoch;
