@@ -34,6 +34,7 @@ class PlayerMenu extends StatefulWidget {
     this.preloadStatus = '',
     this.enhancement,
     this.onCompareEnhancement,
+    this.onExternalPlayback,
   });
 
   final PlayerMenuSection section;
@@ -54,6 +55,7 @@ class PlayerMenu extends StatefulWidget {
   final String preloadStatus;
   final VideoEnhancementController? enhancement;
   final VoidCallback? onCompareEnhancement;
+  final VoidCallback? onExternalPlayback;
   final ValueChanged<int> onEpisode;
   final Future<void> Function(PlaybackPreferences) onPreferences;
   final Future<void> Function() onFavorite;
@@ -338,6 +340,24 @@ class _PlayerMenuState extends State<PlayerMenu> {
             label: Text(widget.favorite ? '取消追剧' : '加入追剧'),
           ),
           const SizedBox(height: 20),
+          if (widget.onExternalPlayback != null) ...[
+            OutlinedButton.icon(
+              key: const ValueKey('player-external'),
+              onPressed: _busy || widget.local
+                  ? null
+                  : widget.onExternalPlayback,
+              icon: const Icon(Icons.open_in_new_rounded),
+              label: const Text('用外部播放器打开'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.local
+                  ? '本地视频请使用文件管理器打开。'
+                  : '把当前播放地址交给系统播放器（如 VLC、MX Player）。',
+              style: helperStyle,
+            ),
+            const SizedBox(height: 20),
+          ],
           Text(
             widget.mobile
                 ? '上下滑切集；长按画面临时 2 倍速，松开恢复。竖屏轻点暂停，横屏轻点显示控制；双击播放或暂停。'

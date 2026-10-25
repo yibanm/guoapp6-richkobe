@@ -21,6 +21,7 @@ import 'playback_launch_screen.dart';
 import 'downloads_screen.dart';
 import 'local_store.dart';
 import 'lan_screen.dart';
+import 'live_screen.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
 import 'widgets.dart';
@@ -815,6 +816,13 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _selectionMode = true);
     } else if (value == 'sources') {
       _manageSources();
+    } else if (value == 'live') {
+      Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => LiveScreen(store: widget.store),
+        ),
+      );
     } else if (value == 'settings') {
       Navigator.push(
         context,
@@ -1099,6 +1107,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () => _moreAction('sources'),
                 ),
               PullDownEntry(
+                label: '直播入口',
+                icon: LucideIcons.tv,
+                onPressed: () => _moreAction('live'),
+              ),
+              PullDownEntry(
                 label: '用户管理',
                 icon: LucideIcons.users,
                 dividerBefore:
@@ -1293,6 +1306,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               value: 'sources',
                               child: Text('站源管理'),
                             ),
+                          const PopupMenuItem(
+                            value: 'live',
+                            child: Text('直播入口'),
+                          ),
                           const PopupMenuItem(
                             value: 'users',
                             child: Text('用户管理'),

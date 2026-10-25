@@ -1377,6 +1377,17 @@ class _PlayerScreenState extends State<PlayerScreen>
               },
               onFavorite: () =>
                   widget.store.toggleFavorite(widget.detail.drama),
+              onExternalPlayback: _plan == null || _plan!.url.isEmpty
+                  ? null
+                  : () async {
+                      Navigator.pop(menuContext);
+                      final opened = await AppDevice.openUrl(_plan!.url);
+                      if (!opened && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('没有可用的外部播放器')),
+                        );
+                      }
+                    },
             ),
           ),
         ),

@@ -9,6 +9,7 @@ import 'models.dart';
 import 'playback_preferences.dart';
 import 'download_preferences.dart';
 import 'catalog_sort.dart';
+import 'live_models.dart';
 import 'webdav_sync.dart';
 import 'follow_state.dart';
 import 'hongguo_series.dart';
@@ -212,6 +213,47 @@ class LocalStore extends ChangeNotifier {
       );
     }
     return value;
+  }
+
+  List<LiveSource> get liveSources => [
+    for (final row in readJsonList(_string('liveSources')))
+      LiveSource.fromJson(row),
+  ];
+
+  Future<void> saveLiveSources(List<LiveSource> sources) {
+    final epoch = _epoch;
+    return _queue(() async {
+      if (_configurationError != null || epoch != _epoch) return;
+      await _commit({
+        'liveSources': jsonEncode(
+          sources.map((source) => source.toJson()).toList(),
+        ),
+      });
+      _notify();
+    });
+  }
+
+  Set<String> _liveFavorites() => (_string('liveFavorites') ?? '')
+      .split('\n')
+      .where((entry) => entry.isNotEmpty)
+      .toSet();
+
+  bool isLiveFavorite(String sourceId, String url) =>
+      _liveFavorites().contains('$sourceId$url');
+
+  Future<void> toggleLiveFavorite(String sourceId, String url) {
+    final epoch = _epoch;
+    final key = '$sourceId$url';
+    return _queue(() async {
+      if (_configurationError != null || epoch != _epoch) return;
+      final entries = _liveFavorites();
+      if (!entries.remove(key)) {
+        if (entries.length >= 5000) return;
+        entries.add(key);
+      }
+      await _commit({'liveFavorites': entries.join('\n')});
+      _notify();
+    });
   }
 
   Future<void> saveWebDavConfig(WebDavConfig config) {
