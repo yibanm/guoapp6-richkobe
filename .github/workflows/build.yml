@@ -29,6 +29,7 @@ env:
 
 jobs:
   checks:
+    if: github.event_name == 'pull_request' || inputs.run_checks == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
