@@ -119,7 +119,7 @@ class WebDavLibrary {
   }
 }
 
-WebDavClient createClient(WebDavConfig config) {
+WebdavClient createClient(WebDavConfig config) {
   var url = config.url.trim();
   if (!url.endsWith('/')) url += '/';
   final client = WebdavClient.basicAuth(
@@ -133,13 +133,13 @@ WebDavClient createClient(WebDavConfig config) {
   return client;
 }
 
-Future<void> ensureSyncFolder(WebDavClient client) async {
+Future<void> ensureSyncFolder(WebdavClient client) async {
   if (!await client.exists('/$_syncFolder')) {
     await client.mkdirAll('/$_syncFolder');
   }
 }
 
-Future<WebDavLibrary?> fetchRemoteLibrary(WebDavClient client) async {
+Future<WebDavLibrary?> fetchRemoteLibrary(WebdavClient client) async {
   final path = '/$_syncFolder/$_syncFile';
   if (!await client.exists(path)) return null;
   final bytes = await client.read(path);
@@ -147,11 +147,11 @@ Future<WebDavLibrary?> fetchRemoteLibrary(WebDavClient client) async {
   return WebDavLibrary.fromJson(json);
 }
 
-Future<void> pushLibrary(WebDavClient client, WebDavLibrary library) async {
+Future<void> pushLibrary(WebdavClient client, WebDavLibrary library) async {
   await ensureSyncFolder(client);
   await client.write(
-    utf8.encode(jsonEncode(library.toJson())),
     '/$_syncFolder/$_syncFile',
+    utf8.encode(jsonEncode(library.toJson())),
   );
 }
 

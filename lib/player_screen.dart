@@ -568,6 +568,30 @@ class _PlayerScreenState extends State<PlayerScreen>
     });
   }
 
+  void _applyLifecycleVisibility({bool pauseWhenHidden = true}) {
+    final windowsInactive =
+        Platform.isWindows && _lifecycleState == AppLifecycleState.inactive;
+    final visible =
+        _lifecycleState == AppLifecycleState.resumed || windowsInactive;
+    _foreground = visible;
+    _enhancement.setForeground(_foreground);
+    _syncDanmaku();
+    _syncPreload();
+    _health.reset();
+    if (!visible) _interactions.cancel();
+    if (pauseWhenHidden &&
+        !visible &&
+        (_lifecycleState == AppLifecycleState.paused ||
+            _lifecycleState == AppLifecycleState.hidden)) {
+      _playIntent = false;
+      unawaited(_player.pause());
+      unawaited(_saveProgress(flush: true));
+    }
+    if (visible && _pendingError) {
+      _queueRecovery();
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _lifecycleState = state;

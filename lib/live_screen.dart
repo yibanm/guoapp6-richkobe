@@ -416,7 +416,7 @@ class LivePlayerScreen extends StatefulWidget {
 class _LivePlayerScreenState extends State<LivePlayerScreen> {
   late final Player _player;
   late final VideoController _controller;
-  int _index;
+  late int _index;
   bool _controlsVisible = true;
 
   @override
