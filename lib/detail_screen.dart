@@ -121,6 +121,13 @@ class _DetailScreenState extends State<DetailScreen> {
             episodePageSize;
       });
       widget.repository.catalogUpdates.publish(merged, retryCover: true);
+      final playability = Playability.fromEpisodes(
+        detail.episodes,
+        merged.episodes,
+      );
+      if (playability != null) {
+        unawaited(widget.store.recordPlayability(merged.id, playability));
+      }
       unawaited(_supplement(merged, generation));
       await saveUserChange(context, () => widget.store.refreshDrama(merged));
       if (mounted &&
@@ -787,7 +794,11 @@ class _DetailScreenState extends State<DetailScreen> {
             SizedBox(
               width: 92,
               height: 138,
-              child: DramaCover(drama: drama, repository: widget.repository),
+              child: DramaCover(
+                drama: drama,
+                repository: widget.repository,
+                playability: widget.store.playabilityOf(drama.id),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(

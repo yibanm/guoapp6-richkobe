@@ -454,3 +454,73 @@ List<Map<String, dynamic>> readJsonList(String? value) {
     return [];
   }
 }
+
+enum PlayabilityStatus { free, partial, locked, incomplete }
+
+class Playability {
+  const Playability({
+    required this.status,
+    this.freeCount = 0,
+    this.checkedAt = 0,
+  });
+  final PlayabilityStatus status;
+  final int freeCount;
+  final int checkedAt;
+
+  String get label => switch (status) {
+    PlayabilityStatus.free => '',
+    PlayabilityStatus.partial => '仅前 $freeCount 集',
+    PlayabilityStatus.locked => '需授权',
+    PlayabilityStatus.incomplete => '集数不全',
+  };
+
+  Map<String, dynamic> toJson() => {
+    'status': status.name,
+    'freeCount': freeCount,
+    'checkedAt': checkedAt,
+  };
+
+  factory Playability.fromJson(Map<String, dynamic> json) => Playability(
+    status: PlayabilityStatus.values.firstWhere(
+      (value) => value.name == json['status'],
+      orElse: () => PlayabilityStatus.free,
+    ),
+    freeCount: intValue(json['freeCount']),
+    checkedAt: intValue(json['checkedAt']),
+  );
+
+  static Playability? fromEpisodes(List<Episode> episodes, int declaredTotal) {
+    if (episodes.isEmpty) return null;
+    var free = 0;
+    for (final episode in episodes) {
+      if (episode.vip) break;
+      free++;
+    }
+    final incomplete = declaredTotal > 0 && episodes.length < declaredTotal;
+    if (free == 0) {
+      return Playability(
+        status: PlayabilityStatus.locked,
+        checkedAt: DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+    if (free < episodes.length) {
+      return Playability(
+        status: PlayabilityStatus.partial,
+        freeCount: free,
+        checkedAt: DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+    if (incomplete) {
+      return Playability(
+        status: PlayabilityStatus.incomplete,
+        freeCount: free,
+        checkedAt: DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+    return Playability(
+      status: PlayabilityStatus.free,
+      freeCount: free,
+      checkedAt: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+}

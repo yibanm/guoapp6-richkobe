@@ -827,6 +827,29 @@ class _PlayerScreenState extends State<PlayerScreen>
         });
       } catch (_) {}
       if (mounted && !_closed && ticket == _generation) {
+        if (!current.local) {
+          final drama = widget.detail.drama;
+          final failedNumber = widget.detail.episodes[_index].number;
+          final existing = widget.store.playabilityOf(drama.id);
+          final freeCount = (existing?.freeCount ?? 0) > 0
+              ? existing!.freeCount
+              : failedNumber - 1;
+          unawaited(
+            widget.store.recordPlayability(
+              drama.id,
+              freeCount > 0
+                  ? Playability(
+                      status: PlayabilityStatus.partial,
+                      freeCount: freeCount,
+                      checkedAt: DateTime.now().millisecondsSinceEpoch,
+                    )
+                  : Playability(
+                      status: PlayabilityStatus.locked,
+                      checkedAt: DateTime.now().millisecondsSinceEpoch,
+                    ),
+            ),
+          );
+        }
         setState(() {
           _loading = false;
           _localFailure = current.local;
@@ -2005,7 +2028,11 @@ class _PlayerScreenState extends State<PlayerScreen>
               SizedBox(
                 width: 82,
                 height: 123,
-                child: DramaCover(drama: drama, repository: widget.repository),
+                child: DramaCover(
+                  drama: drama,
+                  repository: widget.repository,
+                  playability: widget.store.playabilityOf(drama.id),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -246,6 +246,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                             key: ValueKey(drama.id),
                             drama: drama,
                             repository: widget.repository,
+                            playability: widget.store.playabilityOf(drama.id),
                             focusNode: node,
                             onFocus: onFocus,
                             onTap: () => _openDrama(drama),
@@ -275,6 +276,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                   key: ValueKey(drama.id),
                                   drama: drama,
                                   repository: widget.repository,
+                                  playability: widget.store.playabilityOf(
+                                    drama.id,
+                                  ),
                                   onTap: () => _openDrama(drama),
                                 );
                               }, childCount: _items.length),

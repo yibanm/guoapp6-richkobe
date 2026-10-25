@@ -84,6 +84,7 @@ class _SavedLibraryState extends State<SavedLibrary> {
       key: ValueKey('saved-${drama.id}'),
       drama: drama,
       repository: widget.repository,
+      playability: widget.store.playabilityOf(drama.id),
       focusNode: focusNode,
       onFocus: onFocus,
       onTap: () => widget.onOpen(drama),

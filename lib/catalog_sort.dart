@@ -17,25 +17,47 @@ class CatalogView {
     this.sort = CatalogSort.source,
     this.release = '',
     this.allSources = false,
+    this.playability = '',
+    this.completeness = '',
   });
   final CatalogSort sort;
   final String release;
   final bool allSources;
+  final String playability;
+  final String completeness;
+
+  static const playabilityOptions = {
+    '': '全部',
+    'free': '免费完播',
+    'partial': '部分试看',
+    'locked': '需授权',
+  };
+  static const completenessOptions = {
+    '': '全部',
+    'complete': '集数完整',
+    'incomplete': '集数不全',
+  };
 
   CatalogView copyWith({
     CatalogSort? sort,
     String? release,
     bool? allSources,
+    String? playability,
+    String? completeness,
   }) => CatalogView(
     sort: sort ?? this.sort,
     release: release ?? this.release,
     allSources: allSources ?? this.allSources,
+    playability: playability ?? this.playability,
+    completeness: completeness ?? this.completeness,
   );
 
   Map<String, dynamic> toJson() => {
     'sort': sort.name,
     'release': release,
     'allSources': allSources,
+    'playability': playability,
+    'completeness': completeness,
   };
 
   factory CatalogView.fromJson(Map<String, dynamic> value) => CatalogView(
@@ -48,6 +70,14 @@ class CatalogView {
         ? value['release'] as String
         : '',
     allSources: value['allSources'] == true,
+    playability:
+        CatalogView.playabilityOptions.containsKey(value['playability'])
+        ? value['playability'] as String
+        : '',
+    completeness:
+        CatalogView.completenessOptions.containsKey(value['completeness'])
+        ? value['completeness'] as String
+        : '',
   );
 }
 
@@ -160,15 +190,38 @@ int _descending(num? a, num? b) => a == null
     ? -1
     : b.compareTo(a);
 
-List<Drama> sortCatalog(Iterable<Drama> rows, CatalogView view) {
+List<Drama> sortCatalog(
+  Iterable<Drama> rows,
+  CatalogView view, {
+  Playability? Function(String id)? playabilityOf,
+}) {
   final items = rows.where((drama) {
-    if (view.release.isEmpty) return true;
-    final release = drama.releaseStatus == 'completed'
-        ? 'finished'
-        : drama.releaseStatus;
-    return view.release == 'unknown'
-        ? release.isEmpty || release == 'unknown'
-        : release == view.release;
+    if (view.release.isNotEmpty) {
+      final release = drama.releaseStatus == 'completed'
+          ? 'finished'
+          : drama.releaseStatus;
+      final matched = view.release == 'unknown'
+          ? release.isEmpty || release == 'unknown'
+          : release == view.release;
+      if (!matched) return false;
+    }
+    if (view.playability.isNotEmpty || view.completeness.isNotEmpty) {
+      final status = playabilityOf?.call(drama.id)?.status;
+      if (view.playability.isNotEmpty) {
+        final wanted = view.playability;
+        if (status == null) {
+          if (wanted != 'free') return false;
+        } else if (status.name != wanted) {
+          return false;
+        }
+      }
+      if (view.completeness.isNotEmpty) {
+        final isIncomplete = status == PlayabilityStatus.incomplete;
+        if (view.completeness == 'incomplete' && !isIncomplete) return false;
+        if (view.completeness == 'complete' && isIncomplete) return false;
+      }
+    }
+    return true;
   }).toList();
   if (view.sort == CatalogSort.source) return items;
   final positions = {for (final entry in items.indexed) entry.$2.id: entry.$1};

@@ -31,6 +31,7 @@ class LocalStore extends ChangeNotifier {
   final Map<String, Drama> _favorites = {};
   final Map<String, FollowState> _followStates = {};
   final Map<String, Drama> _seriesCandidates = {};
+  final Map<String, Playability> _playability = {};
   Future<void> _writes = Future<void>.value();
   List<LocalProfile> _profiles = [];
   String _current = 'default';
@@ -170,6 +171,47 @@ class LocalStore extends ChangeNotifier {
         }
       } catch (_) {}
     }
+    _playability.clear();
+    final playabilityRaw = _string('playability');
+    if (playabilityRaw != null) {
+      try {
+        final rows = jsonDecode(playabilityRaw) as Map;
+        for (final entry in rows.entries) {
+          _playability[entry.key] = Playability.fromJson(
+            Map<String, dynamic>.from(entry.value as Map),
+          );
+        }
+      } catch (_) {}
+    }
+  }
+
+  Playability? playabilityOf(String id) => _playability[id];
+
+  Future<void> recordPlayability(String id, Playability value) {
+    final epoch = _epoch;
+    return _queue(() async {
+      if (_configurationError != null || epoch != _epoch) return;
+      final existing = _playability[id];
+      if (existing != null &&
+          existing.status == value.status &&
+          existing.freeCount == value.freeCount) {
+        return;
+      }
+      final entries = Map.of(_playability)..[id] = value;
+      if (entries.length > 20000) {
+        final sorted = entries.entries.toList()
+          ..sort((a, b) => a.value.checkedAt.compareTo(b.value.checkedAt));
+        for (final stale in sorted.take(entries.length - 20000)) {
+          entries.remove(stale.key);
+        }
+      }
+      await _commit({
+        'playability': jsonEncode({
+          for (final entry in entries.entries) entry.key: entry.value.toJson(),
+        }),
+      });
+      _notify();
+    });
   }
 
   List<WatchEntry> get history =>

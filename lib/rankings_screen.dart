@@ -394,6 +394,9 @@ class _RankingsScreenState extends State<RankingsScreen> {
                                       child: DramaCover(
                                         drama: item.drama,
                                         repository: widget.repository,
+                                        playability: widget.store.playabilityOf(
+                                          item.drama.id,
+                                        ),
                                         radius: 8,
                                       ),
                                     ),
@@ -465,6 +468,7 @@ class _RankingsScreenState extends State<RankingsScreen> {
         child: DramaCover(
           drama: item.drama,
           repository: widget.repository,
+          playability: widget.store.playabilityOf(item.drama.id),
           radius: 8,
         ),
       ),

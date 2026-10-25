@@ -98,10 +98,12 @@ class DramaCover extends StatelessWidget {
     required this.drama,
     required this.repository,
     this.radius = 14,
+    this.playability,
   });
   final Drama drama;
   final AppRepository repository;
   final double radius;
+  final Playability? playability;
   static const imagesDisabled = bool.fromEnvironment('DISABLE_REMOTE_IMAGES');
 
   @override
@@ -176,6 +178,31 @@ class DramaCover extends StatelessWidget {
                   color: Color(0xFF40300D),
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        if (playability != null &&
+            playability!.status != PlayabilityStatus.free)
+          Positioned(
+            left: 8,
+            top: drama.vip ? 36 : 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: .62),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: .35),
+                  width: .8,
+                ),
+              ),
+              child: Text(
+                playability!.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -340,6 +367,7 @@ class DramaTile extends StatelessWidget {
     this.selected,
     this.onMore,
     this.onLongPress,
+    this.playability,
   });
   final Drama drama;
   final AppRepository repository;
@@ -352,6 +380,7 @@ class DramaTile extends StatelessWidget {
   final bool? selected;
   final VoidCallback? onMore;
   final VoidCallback? onLongPress;
+  final Playability? playability;
 
   static double titleHeight(BuildContext context) =>
       MediaQuery.textScalerOf(
@@ -380,7 +409,11 @@ class DramaTile extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              DramaCover(drama: drama, repository: repository),
+              DramaCover(
+                drama: drama,
+                repository: repository,
+                playability: playability,
+              ),
               if (badge != null && badge!.isNotEmpty)
                 Positioned(
                   left: 6,

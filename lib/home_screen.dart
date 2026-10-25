@@ -527,6 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onCached: (result) => accept(result, cached: true),
       );
       accept(result);
+      unawaited(_refreshStalePlayability(result.items, generation));
     } catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -534,6 +535,36 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadingMore = false;
         _error = error.toString();
       });
+    }
+  }
+
+  Future<void> _refreshStalePlayability(
+    List<Drama> items,
+    int generation,
+  ) async {
+    const staleAfter = Duration(days: 7);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final stale = items
+        .where((drama) {
+          final record = widget.store.playabilityOf(drama.id);
+          return record != null &&
+              record.status != PlayabilityStatus.free &&
+              now - record.checkedAt > staleAfter.inMilliseconds;
+        })
+        .take(8)
+        .toList();
+    for (final drama in stale) {
+      if (!mounted || _generation != generation) return;
+      try {
+        final detail = await widget.repository.detail(drama);
+        final playability = Playability.fromEpisodes(
+          detail.episodes,
+          detail.drama.episodes,
+        );
+        if (playability != null && mounted) {
+          await widget.store.recordPlayability(drama.id, playability);
+        }
+      } catch (_) {}
     }
   }
 
@@ -718,6 +749,7 @@ class _HomeScreenState extends State<HomeScreen> {
       key: ValueKey(drama.id),
       drama: drama,
       repository: widget.repository,
+      playability: widget.store.playabilityOf(drama.id),
       focusNode: focusNode,
       onFocus: onFocus,
       onTap: () => _selectionMode ? _selectDrama(drama) : _openDrama(drama),
@@ -766,6 +798,7 @@ class _HomeScreenState extends State<HomeScreen> {
             matchesDramaQuery(drama, query);
       }),
       widget.store.catalogView,
+      playabilityOf: widget.store.playabilityOf,
     );
   }
 
@@ -889,7 +922,28 @@ class _HomeScreenState extends State<HomeScreen> {
         widget.repository.supportsDownloads;
     final customView =
         widget.store.catalogView.sort != CatalogSort.source ||
-        widget.store.catalogView.release.isNotEmpty;
+        widget.store.catalogView.release.isNotEmpty ||
+        widget.store.catalogView.playability.isNotEmpty ||
+        widget.store.catalogView.completeness.isNotEmpty;
+    final view = widget.store.catalogView;
+    final activeFilters = <String>[
+      if (view.release.isNotEmpty)
+        const {
+              '': '全部',
+              'ongoing': '连载中',
+              'finished': '已完结',
+              'unknown': '状态未知',
+            }[view.release] ??
+            view.release,
+      if (view.playability.isNotEmpty)
+        CatalogView.playabilityOptions[view.playability] ?? view.playability,
+      if (view.completeness.isNotEmpty)
+        CatalogView.completenessOptions[view.completeness] ?? view.completeness,
+    ];
+    final filtersActive = activeFilters.isNotEmpty;
+    final filterTooltip = activeFilters.isEmpty
+        ? '筛选'
+        : '筛选 · ${activeFilters.join(' / ')}';
     final updating = _group.sources.any((source) => _updater.busy(source.id));
     final Widget title;
     if (_selectionMode) {
@@ -990,6 +1044,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: LucideIcons.arrowUpDown,
                     tooltip: '排序与筛选 · ${widget.store.catalogView.sort.label}',
                     highlighted: customView,
+                    onPressed: _chooseCatalogView,
+                  ),
+                if (!_showRecommendations)
+                  GlassGroupItem(
+                    key: const ValueKey('open-filters'),
+                    icon: LucideIcons.listFilter,
+                    tooltip: filterTooltip,
+                    highlighted: filtersActive,
                     onPressed: _chooseCatalogView,
                   ),
                 GlassGroupItem(
