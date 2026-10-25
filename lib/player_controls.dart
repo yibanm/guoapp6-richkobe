@@ -574,50 +574,82 @@ class _PlayerControlsState extends State<PlayerControls> {
               ),
             ),
             Expanded(
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 3,
-                  secondaryActiveTrackColor: Colors.white38,
-                  thumbShape: const RoundSliderThumbShape(
-                    enabledThumbRadius: 6,
-                  ),
-                  overlayShape: const RoundSliderOverlayShape(
-                    overlayRadius: 14,
-                  ),
-                ),
-                child: Slider(
-                  key: const ValueKey('player-progress'),
-                  value: (_seekValue ?? position).clamp(
-                    0,
-                    duration > 0 ? duration : 1,
-                  ),
-                  max: duration > 0 ? duration : 1,
-                  secondaryTrackValue: buffered.clamp(
-                    0,
-                    duration > 0 ? duration : 1,
-                  ),
-                  semanticFormatterCallback: formatPosition,
-                  onChangeStart: widget.enabled && duration > 0
-                      ? (_) {
-                          widget.interactions.cancel();
-                          _hideTimer?.cancel();
-                        }
-                      : null,
-                  onChanged: !widget.enabled || duration <= 0
-                      ? null
-                      : (value) {
-                          _hideTimer?.cancel();
-                          setState(() => _seekValue = value);
+              child: LayoutBuilder(
+                builder: (context, constraints) => Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3,
+                        secondaryActiveTrackColor: Colors.white38,
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 6,
+                        ),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 14,
+                        ),
+                      ),
+                      child: Slider(
+                        key: const ValueKey('player-progress'),
+                        value: (_seekValue ?? position).clamp(
+                          0,
+                          duration > 0 ? duration : 1,
+                        ),
+                        max: duration > 0 ? duration : 1,
+                        secondaryTrackValue: buffered.clamp(
+                          0,
+                          duration > 0 ? duration : 1,
+                        ),
+                        semanticFormatterCallback: formatPosition,
+                        onChangeStart: widget.enabled && duration > 0
+                            ? (_) {
+                                widget.interactions.cancel();
+                                _hideTimer?.cancel();
+                              }
+                            : null,
+                        onChanged: !widget.enabled || duration <= 0
+                            ? null
+                            : (value) {
+                                _hideTimer?.cancel();
+                                setState(() => _seekValue = value);
+                              },
+                        onChangeEnd: (value) {
+                          if (widget.enabled && duration > 0) {
+                            (widget.onSeek ?? widget.player.seek)(
+                              Duration(milliseconds: (value * 1000).round()),
+                            );
+                          }
+                          setState(() => _seekValue = null);
+                          _show();
                         },
-                  onChangeEnd: (value) {
-                    if (widget.enabled && duration > 0) {
-                      (widget.onSeek ?? widget.player.seek)(
-                        Duration(milliseconds: (value * 1000).round()),
-                      );
-                    }
-                    setState(() => _seekValue = null);
-                    _show();
-                  },
+                      ),
+                    ),
+                    if (_seekValue != null && duration > 0)
+                      Positioned(
+                        left:
+                            ((constraints.maxWidth - 12) *
+                                    (_seekValue! / duration))
+                                .clamp(0, constraints.maxWidth - 56) +
+                            6,
+                        top: -26,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: .72),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            child: Text(
+                              formatPosition(_seekValue!),
+                              style: timeStyle,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),

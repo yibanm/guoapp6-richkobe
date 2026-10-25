@@ -218,7 +218,10 @@ class _PlaybackLaunchScreenState extends State<PlaybackLaunchScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(),
+                  SizedBox(
+                    width: 180,
+                    child: LinearProgressIndicator(minHeight: 3),
+                  ),
                   SizedBox(height: 16),
                   Text('正在进入播放'),
                 ],

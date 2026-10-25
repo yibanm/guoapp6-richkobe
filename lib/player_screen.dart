@@ -128,6 +128,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _rotating = false;
   bool _television = false;
   AppOrientationController? _orientationController;
+  Rect? _windowBoundsBeforeFullscreen;
   bool get _mobile =>
       !_television &&
       (defaultTargetPlatform == TargetPlatform.android ||
@@ -1011,7 +1012,14 @@ class _PlayerScreenState extends State<PlayerScreen>
     });
     try {
       if (windows) {
+        if (fullscreen && _windowBoundsBeforeFullscreen == null) {
+          _windowBoundsBeforeFullscreen = await windowManager.getBounds();
+        }
         await windowManager.setFullScreen(fullscreen);
+        if (!fullscreen && _windowBoundsBeforeFullscreen != null) {
+          await windowManager.setBounds(_windowBoundsBeforeFullscreen!);
+          _windowBoundsBeforeFullscreen = null;
+        }
       } else if (_mobile) {
         await (_orientationController?.setPlayback(
               this,
@@ -1383,7 +1391,18 @@ class _PlayerScreenState extends State<PlayerScreen>
       }),
     );
     if (Platform.isWindows) {
-      unawaited(windowManager.setFullScreen(false));
+      final bounds = _windowBoundsBeforeFullscreen;
+      _windowBoundsBeforeFullscreen = null;
+      unawaited(
+        windowManager
+            .setFullScreen(false)
+            .then((_) async {
+              if (bounds != null) {
+                await windowManager.setBounds(bounds);
+              }
+            })
+            .catchError((Object _) {}),
+      );
     } else if (_mobile || _television && Platform.isAndroid) {
       unawaited(
         (_orientationController?.releasePlayback(this) ??
@@ -1646,7 +1665,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const CircularProgressIndicator(),
+                        SizedBox(
+                          width: 180,
+                          child: LinearProgressIndicator(minHeight: 3),
+                        ),
                         const SizedBox(height: 16),
                         Text(_loadingMessage),
                       ],
