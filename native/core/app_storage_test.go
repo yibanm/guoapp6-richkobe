@@ -9,7 +9,7 @@ import (
 
 func storageFixture(t *testing.T) (*nativeEngine, string) {
 	t.Helper()
-	engine, err := newNativeEngine(t.TempDir(), "")
+	engine, err := newNativeEngine(t.TempDir(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestDownloadMigrationPreservesMediaAndRestartLocation(t *testing.T) {
 	if err != nil || info.Files < 2 || info.Bytes < 15 || info.Free < 1 {
 		t.Fatalf("storage stats: %+v %v", info, err)
 	}
-	restarted := newNativeDownloads(engine, "")
+	restarted := newNativeDownloads(engine, engine.directory)
 	defer restarted.close()
 	if len(restarted.jobs) != 1 || restarted.jobs[id].State != "completed" {
 		t.Fatal("restart lost jobs")

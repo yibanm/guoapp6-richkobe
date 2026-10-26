@@ -21,7 +21,7 @@ import (
 
 func downloadTestManager(t *testing.T) *nativeDownloads {
 	t.Helper()
-	engine, err := newNativeEngine(t.TempDir(), "")
+	engine, err := newNativeEngine(t.TempDir(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestNativeDownloadsOriginalBytesPersistenceAndLocalPriority(t *testing.T) {
 		return len(jobs) == 2 && jobs[0].State == "completed" && jobs[1].State == "completed"
 	})
 	manager.close()
-	reopened := newNativeDownloads(manager.engine, "")
+	reopened := newNativeDownloads(manager.engine, manager.root)
 	t.Cleanup(reopened.close)
 	manager.engine.downloads = reopened
 	upstream.Close()
@@ -379,7 +379,7 @@ func TestNativeDownloadsRestartPausesPendingJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 	manager.close()
-	reopened := newNativeDownloads(manager.engine, "")
+	reopened := newNativeDownloads(manager.engine, manager.root)
 	t.Cleanup(reopened.close)
 	jobs, err := reopened.snapshot()
 	if err != nil || len(jobs) != 3 {

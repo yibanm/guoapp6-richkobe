@@ -50,7 +50,7 @@ func TestHongguoBackupAddressesAndCodecAlternatives(t *testing.T) {
 }
 
 func TestNativePlaybackFallbackPreservesKeysAndReleasesOnlyOldSession(t *testing.T) {
-	engine, err := newNativeEngine(t.TempDir(), "")
+	engine, err := newNativeEngine(t.TempDir(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestNativePlaybackFallbackPreservesKeysAndReleasesOnlyOldSession(t *testing
 }
 
 func TestNativePlaybackHLSAlternativesAreLazyAndIsolated(t *testing.T) {
-	engine, err := newNativeEngine(t.TempDir(), "")
+	engine, err := newNativeEngine(t.TempDir(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestNativePlaybackPreferredRouteAndManualSelection(t *testing.T) {
 			t.Fatalf("preferred route %d resolved to %d, want %d", preferred, actual, want)
 		}
 	}
-	engine, err := newNativeEngine(t.TempDir(), "")
+	engine, err := newNativeEngine(t.TempDir(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
