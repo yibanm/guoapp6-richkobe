@@ -121,4 +121,39 @@ void main() {
     expect(record, isNotNull, reason: 'detail 失败必须落记录，不能静默跳过');
     expect(record!.status, PlayabilityStatus.unplayable);
   });
+
+  // 回归守卫：探测在途时首页 generation 跳号（切后台/切页触发 _pauseCatalog）
+  // 不得丢弃在途探测结果——记录是 store 级，与视图 generation 无关。
+  testWidgets('探测在途时 generation 跳号仍落记录', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    SharedPreferences.setMockInitialValues({});
+    final store = LocalStore(await SharedPreferences.getInstance());
+    addTearDown(store.dispose);
+
+    final repository = _DeadSourceRepository();
+    repository.cachedPages['hongguo'] = CatalogPage([FixtureRepository.free]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(repository: repository, store: store),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    // 模拟切后台再回前台：触发 _pauseCatalog → _generation++
+    final binding = tester.binding;
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump(const Duration(milliseconds: 50));
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+    final record = store.playabilityOf(FixtureRepository.free.id);
+    expect(record, isNotNull, reason: 'generation 跳号不得丢弃在途探测结果');
+    expect(record!.status, PlayabilityStatus.unplayable);
+  });
 }

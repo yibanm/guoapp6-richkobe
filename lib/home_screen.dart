@@ -617,7 +617,10 @@ class _HomeScreenState extends State<HomeScreen> {
           } on TimeoutException {
             detail = DramaDetail(drama, const []);
           }
-          if (!mounted || _generation != generation) return;
+          // 记录是 store 级（按剧 id），与视图 generation 无关：
+          // 只守 mounted，不守 generation——否则首页任何刷新都会让
+          // 在途探测结果被整条丢弃，真机上记录永远写不进去。
+          if (!mounted) return;
           Playability? playability;
           if (detail.episodes.isEmpty) {
             playability = Playability(
