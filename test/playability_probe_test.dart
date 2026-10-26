@@ -20,6 +20,12 @@ class _DeadSourceRepository extends FixtureRepository {
   }) async => throw AppFailure('源站取流失败：合成死源');
 }
 
+// detail 一律失败的仓库：模拟源站详情链路失效。
+class _DeadDetailRepository extends FixtureRepository {
+  @override
+  Future<DramaDetail> detail(Drama drama) async => throw AppFailure('源站详情链路失效');
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -87,5 +93,32 @@ void main() {
       ),
       isEmpty,
     );
+  });
+
+  testWidgets('detail 链路失效的剧同样标「无法播放」而非静默跳过', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    SharedPreferences.setMockInitialValues({});
+    final store = LocalStore(await SharedPreferences.getInstance());
+    addTearDown(store.dispose);
+
+    final repository = _DeadDetailRepository();
+    repository.cachedPages['hongguo'] = CatalogPage([FixtureRepository.free]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(repository: repository, store: store),
+      ),
+    );
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+    final record = store.playabilityOf(FixtureRepository.free.id);
+    expect(record, isNotNull, reason: 'detail 失败必须落记录，不能静默跳过');
+    expect(record!.status, PlayabilityStatus.unplayable);
   });
 }

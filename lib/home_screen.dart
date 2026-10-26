@@ -607,9 +607,16 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           // 探测用独立短超时：源站挂起时不等 Go 侧 60s 全量超时，
           // 超时按不可播处理，保证首轮标签在分钟级内出齐。
-          final detail = await widget.repository
-              .detail(drama)
-              .timeout(const Duration(seconds: 20));
+          late final DramaDetail detail;
+          try {
+            detail = await widget.repository
+                .detail(drama)
+                .timeout(const Duration(seconds: 20));
+          } on AppFailure {
+            detail = DramaDetail(drama, const []);
+          } on TimeoutException {
+            detail = DramaDetail(drama, const []);
+          }
           if (!mounted || _generation != generation) return;
           Playability? playability;
           if (detail.episodes.isEmpty) {
