@@ -569,7 +569,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onCached: (result) => accept(result, cached: true),
       );
       accept(result);
-      unawaited(_refreshStalePlayability(result.items, generation));
+      unawaited(_refreshStalePlayability(result.items));
     } catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -583,10 +583,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // 后台主动探测可播性：对无记录或记录过期的剧取第一集播放地址（仅解析+读
   // 首字节，不整集下载），失败标「无法播放」，成功按集级 VIP 静态标记分级。
   // 每轮限 8 部、并发 2，避免对源站造成压力；用户无感知、不阻塞列表。
-  Future<void> _refreshStalePlayability(
-    List<Drama> items,
-    int generation,
-  ) async {
+  Future<void> _refreshStalePlayability(List<Drama> items) async {
     const staleAfter = Duration(hours: 24);
     final now = DateTime.now().millisecondsSinceEpoch;
     final targets = items
@@ -600,7 +597,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (targets.isEmpty) return;
     var cursor = 0;
     Future<void> worker() async {
-      while (mounted && _generation == generation) {
+      // 探测是 store 级后台任务：targets 启动时已快照，记录 24h 内有效，
+      // 视图 generation 跳号（剧库更新通知/切页/切后台）不影响其价值，
+      // 循环只守 mounted——旧版在循环头守 generation，真机启动即被
+      // 剧库更新通知跳号杀死，首轮一部都探不到（测试环境无 updater 故全绿）。
+      while (mounted) {
         final index = cursor++;
         if (index >= targets.length) return;
         final drama = targets[index];

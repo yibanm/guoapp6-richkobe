@@ -191,6 +191,28 @@ int _descending(num? a, num? b) => a == null
     ? -1
     : b.compareTo(a);
 
+/// 观看权限与集数完整度的全局筛选谓词：发现页、追剧、最近观看共用，
+/// 跨所有站源生效。未探测（无记录）的剧在任何非空筛选下一律隐藏——
+/// 「免费完播」等质量选项只放行已探测且状态匹配的条目。
+bool matchesQualityFilters(
+  Drama drama,
+  CatalogView view,
+  Playability? Function(String id)? playabilityOf,
+) {
+  if (view.playability.isEmpty && view.completeness.isEmpty) return true;
+  final status = playabilityOf?.call(drama.id)?.status;
+  if (view.playability.isNotEmpty) {
+    if (status == null || status.name != view.playability) return false;
+  }
+  if (view.completeness.isNotEmpty) {
+    if (status == null) return false;
+    final isIncomplete = status == PlayabilityStatus.incomplete;
+    if (view.completeness == 'incomplete' && !isIncomplete) return false;
+    if (view.completeness == 'complete' && isIncomplete) return false;
+  }
+  return true;
+}
+
 List<Drama> sortCatalog(
   Iterable<Drama> rows,
   CatalogView view, {
@@ -206,21 +228,7 @@ List<Drama> sortCatalog(
           : release == view.release;
       if (!matched) return false;
     }
-    if (view.playability.isNotEmpty || view.completeness.isNotEmpty) {
-      final status = playabilityOf?.call(drama.id)?.status;
-      if (view.playability.isNotEmpty) {
-        // 「免费完播」等观看权限筛选只放行已探测且状态匹配的剧；
-        // 未探测（无记录）一律隐藏，避免把没验过的剧当能播的展示。
-        if (status == null || status.name != view.playability) return false;
-      }
-      if (view.completeness.isNotEmpty) {
-        // 未探测的剧集数完整度未知，一律隐藏
-        if (status == null) return false;
-        final isIncomplete = status == PlayabilityStatus.incomplete;
-        if (view.completeness == 'incomplete' && !isIncomplete) return false;
-        if (view.completeness == 'complete' && isIncomplete) return false;
-      }
-    }
+    if (!matchesQualityFilters(drama, view, playabilityOf)) return false;
     return true;
   }).toList();
   if (view.sort == CatalogSort.source) return items;
