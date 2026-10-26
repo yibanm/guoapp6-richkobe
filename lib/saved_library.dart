@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_layout.dart';
 import 'catalog_sort.dart';
+import 'catalog_sort_sheet.dart';
 import 'core_bridge.dart';
 import 'drama_actions.dart';
 import 'follow_state.dart';
@@ -42,6 +43,21 @@ class SavedLibrary extends StatefulWidget {
 class _SavedLibraryState extends State<SavedLibrary> {
   final _search = TextEditingController();
   String _filter = '';
+
+  bool get _qualityFilterActive =>
+      widget.store.catalogView.playability.isNotEmpty ||
+      widget.store.catalogView.completeness.isNotEmpty;
+
+  Future<void> _openQualityFilters() async {
+    final next = await chooseCatalogView(
+      context,
+      widget.store.catalogView,
+      mode: CatalogSheetMode.filters,
+    );
+    if (next == null || !mounted) return;
+    await saveUserChange(context, () => widget.store.setCatalogView(next));
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -110,6 +126,14 @@ class _SavedLibraryState extends State<SavedLibrary> {
           : widget.store.favorites;
       final items = all.where((drama) {
         if (!matchesDramaQuery(drama, _search.text)) return false;
+        // 全局观看权限/集数完整度筛选：跨所有站源生效（与发现页同一套设置）
+        if (!matchesQualityFilters(
+          drama,
+          widget.store.catalogView,
+          widget.store.playabilityOf,
+        )) {
+          return false;
+        }
         final state = widget.store.following(drama.id);
         return widget.history ||
             _filter.isEmpty ||
@@ -144,6 +168,18 @@ class _SavedLibraryState extends State<SavedLibrary> {
                   onPressed: _clearHistory,
                   icon: const Icon(Icons.delete_outline_rounded),
                 ),
+              IconButton(
+                key: const ValueKey('saved-quality-filters'),
+                tooltip: _qualityFilterActive
+                    ? '筛选（已启用，跨站源生效）'
+                    : '筛选（观看权限/集数完整度，跨站源生效）',
+                onPressed: _openQualityFilters,
+                icon: Icon(
+                  _qualityFilterActive
+                      ? Icons.filter_alt_rounded
+                      : Icons.filter_alt_outlined,
+                ),
+              ),
             ],
           ),
         ),
