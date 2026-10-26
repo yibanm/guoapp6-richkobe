@@ -580,34 +580,67 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 后台主动探测可播性：对无记录或记录过期的剧取第一集播放地址（仅解析+读
+  // 首字节，不整集下载），失败标「无法播放」，成功按集级 VIP 静态标记分级。
+  // 每轮限 8 部、并发 2，避免对源站造成压力；用户无感知、不阻塞列表。
   Future<void> _refreshStalePlayability(
     List<Drama> items,
     int generation,
   ) async {
-    const staleAfter = Duration(days: 7);
+    const staleAfter = Duration(hours: 24);
     final now = DateTime.now().millisecondsSinceEpoch;
-    final stale = items
+    final targets = items
         .where((drama) {
           final record = widget.store.playabilityOf(drama.id);
-          return record != null &&
-              record.status != PlayabilityStatus.free &&
+          return record == null ||
               now - record.checkedAt > staleAfter.inMilliseconds;
         })
         .take(8)
         .toList();
-    for (final drama in stale) {
-      if (!mounted || _generation != generation) return;
-      try {
-        final detail = await widget.repository.detail(drama);
-        final playability = Playability.fromEpisodes(
-          detail.episodes,
-          detail.drama.episodes,
-        );
-        if (playability != null && mounted) {
-          await widget.store.recordPlayability(drama.id, playability);
+    if (targets.isEmpty) return;
+    var cursor = 0;
+    Future<void> worker() async {
+      while (mounted && _generation == generation) {
+        final index = cursor++;
+        if (index >= targets.length) return;
+        final drama = targets[index];
+        try {
+          final detail = await widget.repository.detail(drama);
+          if (!mounted || _generation != generation) return;
+          Playability? playability;
+          if (detail.episodes.isEmpty) {
+            playability = Playability(
+              status: PlayabilityStatus.unplayable,
+              checkedAt: DateTime.now().millisecondsSinceEpoch,
+            );
+          } else {
+            try {
+              final plan = await widget.repository.resolve(
+                drama,
+                detail.episodes.first,
+              );
+              await widget.repository.release(plan.session);
+              playability = Playability.fromEpisodes(
+                detail.episodes,
+                detail.drama.episodes,
+              );
+            } on AppFailure {
+              playability = Playability(
+                status: PlayabilityStatus.unplayable,
+                checkedAt: DateTime.now().millisecondsSinceEpoch,
+              );
+            }
+          }
+          if (playability != null && mounted) {
+            await widget.store.recordPlayability(drama.id, playability);
+          }
+        } catch (_) {
+          // 单部探测失败不影响其余，下一轮过期后重试
         }
-      } catch (_) {}
+      }
     }
+
+    await Future.wait([worker(), worker()]);
   }
 
   void _changeSource(SourceSite source, {bool allSources = false}) {
@@ -982,11 +1015,6 @@ class _HomeScreenState extends State<HomeScreen> {
         !_showRecommendations &&
         widget.store.canDownload &&
         widget.repository.supportsDownloads;
-    final customView =
-        widget.store.catalogView.sort != CatalogSort.source ||
-        widget.store.catalogView.release.isNotEmpty ||
-        widget.store.catalogView.playability.isNotEmpty ||
-        widget.store.catalogView.completeness.isNotEmpty;
     final view = widget.store.catalogView;
     final activeFilters = <String>[
       if (view.release.isNotEmpty)

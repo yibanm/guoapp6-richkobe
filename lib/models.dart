@@ -455,7 +455,7 @@ List<Map<String, dynamic>> readJsonList(String? value) {
   }
 }
 
-enum PlayabilityStatus { free, partial, locked, incomplete }
+enum PlayabilityStatus { free, partial, locked, incomplete, unplayable }
 
 class Playability {
   const Playability({
@@ -472,6 +472,7 @@ class Playability {
     PlayabilityStatus.partial => '仅前 $freeCount 集',
     PlayabilityStatus.locked => '需授权',
     PlayabilityStatus.incomplete => '集数不全',
+    PlayabilityStatus.unplayable => '无法播放',
   };
 
   Map<String, dynamic> toJson() => {

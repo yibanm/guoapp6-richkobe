@@ -31,6 +31,7 @@ class CatalogView {
     'free': '免费完播',
     'partial': '部分试看',
     'locked': '需授权',
+    'unplayable': '无法播放',
   };
   static const completenessOptions = {
     '': '全部',
