@@ -1,0 +1,71 @@
+import 'package:duanju_app/catalog_sort.dart';
+import 'package:duanju_app/core_bridge.dart';
+import 'package:duanju_app/home_screen.dart';
+import 'package:duanju_app/local_store.dart';
+import 'package:duanju_app/models.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'fixtures.dart';
+
+// resolve 一律失败的仓库：模拟源站取流链路全灭（如红果 2026-10-26 实测状态）。
+class _DeadSourceRepository extends FixtureRepository {
+  @override
+  Future<PlaybackPlan> resolve(
+    Drama drama,
+    Episode episode, {
+    int quality = 0,
+    int route = 0,
+  }) async => throw AppFailure('源站取流失败：合成死源');
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('取流失败的剧封面标「无法播放」且可被筛选排除', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    SharedPreferences.setMockInitialValues({});
+    final store = LocalStore(await SharedPreferences.getInstance());
+    addTearDown(store.dispose);
+
+    final repository = _DeadSourceRepository();
+    repository.cachedPages['hongguo'] = CatalogPage([FixtureRepository.free]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(repository: repository, store: store),
+      ),
+    );
+    // 后台探测是异步链（detail→resolve→recordPlayability），推进若干帧与时间
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+    // 1. 探测记录已写入且为 unplayable
+    final record = store.playabilityOf(FixtureRepository.free.id);
+    expect(record, isNotNull);
+    expect(record!.status, PlayabilityStatus.unplayable);
+
+    // 2. 「无法播放」标签已渲染（封面角标 + 列表摘要等多处）
+    expect(find.text('无法播放'), findsWidgets);
+
+    // 3. 筛选「免费完播」时该剧被排除，「无法播放」时保留
+    final all = sortCatalog(
+      [FixtureRepository.free],
+      const CatalogView(playability: 'free'),
+      playabilityOf: store.playabilityOf,
+    );
+    expect(all, isEmpty);
+    final onlyDead = sortCatalog(
+      [FixtureRepository.free],
+      const CatalogView(playability: 'unplayable'),
+      playabilityOf: store.playabilityOf,
+    );
+    expect(onlyDead, hasLength(1));
+  });
+}

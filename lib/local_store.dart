@@ -326,6 +326,10 @@ class LocalStore extends ChangeNotifier {
           entries.remove(stale.key);
         }
       }
+      // 写盘前同步内存映射，否则 playabilityOf 读不到新记录、封面标签要重启才出现
+      _playability
+        ..clear()
+        ..addAll(entries);
       await _commit({
         'playability': jsonEncode({
           for (final entry in entries.entries) entry.key: entry.value.toJson(),
