@@ -14,6 +14,8 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Environment
+import android.provider.Settings
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.view.InputDevice
@@ -137,6 +139,22 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                         "playbackPower" -> result.success(runCatching { playbackPower() }.getOrNull())
+                        "storageManagerStatus" -> result.success(
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                                Environment.isExternalStorageManager()
+                        )
+                        "requestStorageManager" -> {
+                            val opened = runCatching {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    startActivity(
+                                        Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    )
+                                    true
+                                } else false
+                            }.getOrDefault(false)
+                            result.success(opened)
+                        }
                         "openUrl" -> {
                             val url = call.argument<String>("url").orEmpty()
                             val opened = runCatching {

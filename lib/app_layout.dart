@@ -91,6 +91,37 @@ class AppDevice {
       return false;
     }
   }
+
+  static Future<bool> storageManagerGranted() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+    try {
+      final granted = await channel
+          .invokeMethod<bool>('storageManagerStatus')
+          .timeout(const Duration(seconds: 2));
+      return granted == true;
+    } on PlatformException {
+      return true;
+    } on MissingPluginException {
+      return true;
+    } on TimeoutException {
+      return true;
+    }
+  }
+
+  static Future<bool> requestStorageManager() async {
+    try {
+      final opened = await channel
+          .invokeMethod<bool>('requestStorageManager')
+          .timeout(const Duration(seconds: 3));
+      return opened == true;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    } on TimeoutException {
+      return false;
+    }
+  }
 }
 
 class AppLayout extends InheritedWidget {

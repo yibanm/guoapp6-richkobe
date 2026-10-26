@@ -98,7 +98,7 @@ func TestHuangguoMediaUsesBrowserSessionPageRefererAndPreviewToken(t *testing.T)
 		t.Fatal("player did not receive source key")
 	}
 	engine := &nativeEngine{downloader: d, directory: d.cfg.dataDir}
-	manager := newNativeDownloads(engine)
+	manager := newNativeDownloads(engine, "")
 	engine.downloads = manager
 	t.Cleanup(manager.close)
 	job := nativeDownloadJob{ID: "synthetic-job", Drama: nativeDrama{ID: task.DramaID, Source: sourceHuangguoVideo}, Index: 1}
@@ -177,7 +177,7 @@ func TestLegacyPlaybackAndDownloadUseAuthenticatedPlaylistAndSourceKey(t *testin
 		t.Fatal("legacy resolver failed", err)
 	}
 	engine := &nativeEngine{downloader: d, directory: d.cfg.dataDir}
-	manager := newNativeDownloads(engine)
+	manager := newNativeDownloads(engine, "")
 	engine.downloads = manager
 	t.Cleanup(manager.close)
 	result, err := manager.transferMedia(context.Background(), nativeDownloadJob{ID: "legacy-fixture"}, media)

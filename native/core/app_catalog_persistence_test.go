@@ -45,7 +45,7 @@ func nativeHongguoResponse(request *http.Request, next int, more bool, session s
 
 func reopenCatalogEngine(t *testing.T, directory string, transport sourceFixtureTransport) *nativeEngine {
 	t.Helper()
-	engine, err := newNativeEngine(directory)
+	engine, err := newNativeEngine(directory, "")
 	if err != nil {
 		t.Fatal(err)
 	}

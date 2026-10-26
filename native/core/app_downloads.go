@@ -92,8 +92,8 @@ func (manager *nativeDownloads) unarchivedCountLocked() int {
 	return count
 }
 
-func newNativeDownloads(engine *nativeEngine) *nativeDownloads {
-	manager := &nativeDownloads{root: nativeDownloadLocation(engine.directory), engine: engine,
+func newNativeDownloads(engine *nativeEngine, defaultDownload string) *nativeDownloads {
+	manager := &nativeDownloads{root: nativeDownloadLocation(engine.directory, defaultDownload), engine: engine,
 		jobs: map[string]*nativeDownloadRecord{}, active: map[string]context.CancelFunc{}}
 	settings := engine.resourceSettings()
 	manager.concurrency, manager.bySource = settings.DownloadConcurrency, settings.DownloadBySource

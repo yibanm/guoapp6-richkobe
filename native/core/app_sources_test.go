@@ -33,7 +33,7 @@ func sourceFixtureDownloader(t *testing.T, transport sourceFixtureTransport) *Do
 
 func sourceFixtureEngine(t *testing.T, transport sourceFixtureTransport) *nativeEngine {
 	t.Helper()
-	engine, err := newNativeEngine(t.TempDir())
+	engine, err := newNativeEngine(t.TempDir(), "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -243,7 +243,7 @@ func nativeDramaCategory(drama Drama) string {
 	return ""
 }
 
-func newNativeEngine(directory string) (*nativeEngine, error) {
+func newNativeEngine(directory, defaultDownload string) (*nativeEngine, error) {
 	if !filepath.IsAbs(directory) {
 		return nil, errors.New("应用数据目录无效")
 	}
@@ -277,7 +277,7 @@ func newNativeEngine(directory string) (*nativeEngine, error) {
 	engine.loadCatalogCache()
 	engine.loadSourceRecords()
 	engine.covers = newNativeCoverCache(directory, d)
-	engine.downloads = newNativeDownloads(engine)
+	engine.downloads = newNativeDownloads(engine, defaultDownload)
 	return engine, nil
 }
 
@@ -340,7 +340,7 @@ func nativeDispatch(input nativeInput) (any, error) {
 	nativeState.Lock()
 	if input.Action == "initialize" {
 		if nativeState.engine == nil {
-			engine, err := newNativeEngine(input.Directory)
+			engine, err := newNativeEngine(input.Directory, nativeDefaultDownloadRoot())
 			if err != nil {
 				nativeState.Unlock()
 				return nil, err

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -417,6 +418,45 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadCategories();
     } else {
       _loading = false;
+    }
+    if (Platform.isAndroid) unawaited(_promptStorageManager());
+  }
+
+  Future<void> _promptStorageManager() async {
+    if (widget.store.preferences.getBool('storageManagerPromptSkipped') ==
+        true) {
+      return;
+    }
+    if (await AppDevice.storageManagerGranted()) return;
+    if (!mounted) return;
+    final choice = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('需要文件访问权限'),
+        content: const Text(
+          '下载目录位于公共 Download/科比短剧，'
+          '需要授予「所有文件访问」权限才能写入。'
+          '拒绝后仍可浏览与在线播放，下载会失败。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('暂不'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
+    if (choice == true) {
+      await AppDevice.requestStorageManager();
+    } else if (choice == false && mounted) {
+      await widget.store.preferences.setBool(
+        'storageManagerPromptSkipped',
+        true,
+      );
     }
   }
 

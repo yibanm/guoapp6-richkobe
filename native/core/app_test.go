@@ -27,7 +27,7 @@ func TestNativeBoundaryRejectsInvalidInput(t *testing.T) {
 			t.Fatal("invalid request accepted")
 		}
 	}
-	engine, err := newNativeEngine(t.TempDir())
+	engine, err := newNativeEngine(t.TempDir(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestNativeHLSReadsNestedPlaylistKeyAndRanges(t *testing.T) {
 		}
 	}))
 	defer upstream.Close()
-	engine, err := newNativeEngine(t.TempDir())
+	engine, err := newNativeEngine(t.TempDir(), "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,7 +12,7 @@ func TestLiveProviderCatalogRankingDetailAndPlaybackSmoke(t *testing.T) {
 	if os.Getenv("CHECK_LIVE_PROVIDERS") != "true" {
 		t.Skip("set CHECK_LIVE_PROVIDERS=true to touch live provider text APIs")
 	}
-	engine, err := newNativeEngine(t.TempDir())
+	engine, err := newNativeEngine(t.TempDir(), "")
 	if err != nil {
 		t.Fatal(err)
 	}

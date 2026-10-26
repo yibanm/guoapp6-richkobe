@@ -61,7 +61,7 @@ func nativeDefaultDownloadRoot() string {
 	return ""
 }
 
-func nativeDownloadLocation(directory string) string {
+func nativeDownloadLocation(directory, defaultDownload string) string {
 	var value struct {
 		Directory string `json:"directory"`
 	}
@@ -69,8 +69,8 @@ func nativeDownloadLocation(directory string) string {
 	if json.Unmarshal(body, &value) == nil && filepath.IsAbs(value.Directory) {
 		return filepath.Clean(value.Directory)
 	}
-	if root := nativeDefaultDownloadRoot(); root != "" {
-		return root
+	if defaultDownload != "" {
+		return defaultDownload
 	}
 	return filepath.Join(directory, "downloads")
 }
@@ -160,10 +160,13 @@ func (engine *nativeEngine) moveDownloads(ctx context.Context, parent string) er
 		manager.mu.Unlock()
 		return nil
 	}
-	relative, _ := filepath.Rel(manager.root, target)
-	inverse, _ := filepath.Rel(target, manager.root)
-	if (relative != ".." && !strings.HasPrefix(relative, ".."+string(os.PathSeparator))) ||
-		(inverse != ".." && !strings.HasPrefix(inverse, ".."+string(os.PathSeparator))) {
+	relative, relErr := filepath.Rel(manager.root, target)
+	inverse, invErr := filepath.Rel(target, manager.root)
+	// Rel 跨盘符（Windows 不同驱动器）报错返回空串，此时两目录不可能互相包含，应放行
+	contained := func(path string, err error) bool {
+		return err == nil && path != ".." && !strings.HasPrefix(path, ".."+string(os.PathSeparator))
+	}
+	if contained(relative, relErr) || contained(inverse, invErr) {
 		manager.mu.Unlock()
 		return errors.New("新目录不能与原下载目录互相包含")
 	}

@@ -56,7 +56,7 @@ func TestNativeBuildPreservesForeignDownloadRecordsAndRestrictsScheduling(t *tes
 	if err := os.WriteFile(filepath.Join(manager.root, "index.json"), data, 0600); err != nil {
 		t.Fatal(err)
 	}
-	reopened := newNativeDownloads(manager.engine)
+	reopened := newNativeDownloads(manager.engine, "")
 	t.Cleanup(reopened.close)
 	jobs, err := reopened.snapshot()
 	expected := 1
