@@ -172,6 +172,13 @@ type nativeEngine struct {
 	sourceRecords    map[string]nativeSourceRecord
 	sourceCatalogMu  sync.Mutex
 	sourceCatalogs   map[string]chan struct{}
+	detailCache      map[string]nativeDetailCacheEntry
+}
+
+// nativeDetailCacheEntry 缓存一次详情解析结果，短时间内重复进入同一部剧秒开。
+type nativeDetailCacheEntry struct {
+	value map[string]any
+	at    time.Time
 }
 
 var nativeState struct {
@@ -687,6 +694,12 @@ func (engine *nativeEngine) nativeDetail(ctx context.Context, drama nativeDrama)
 	if !valid {
 		return nil, errors.New("剧集信息无效，请刷新剧库")
 	}
+	engine.mu.Lock()
+	if entry, ok := engine.detailCache[drama.ID]; ok && time.Since(entry.at) < 30*time.Minute {
+		engine.mu.Unlock()
+		return entry.value, nil
+	}
+	engine.mu.Unlock()
 	var title string
 	var raw Drama
 	var chapters []Chapter
@@ -743,7 +756,24 @@ func (engine *nativeEngine) nativeDetail(ctx context.Context, drama nativeDrama)
 	if err := engine.saveDetailMetadata(drama); err != nil {
 		warning = err.Error()
 	}
-	return map[string]any{"drama": drama, "chapters": chapters, "warning": warning}, nil
+	result := map[string]any{"drama": drama, "chapters": chapters, "warning": warning}
+	engine.mu.Lock()
+	if engine.detailCache == nil {
+		engine.detailCache = map[string]nativeDetailCacheEntry{}
+	}
+	if len(engine.detailCache) > 512 {
+		for id, entry := range engine.detailCache {
+			if time.Since(entry.at) > 30*time.Minute {
+				delete(engine.detailCache, id)
+			}
+		}
+		if len(engine.detailCache) > 512 {
+			engine.detailCache = map[string]nativeDetailCacheEntry{}
+		}
+	}
+	engine.detailCache[drama.ID] = nativeDetailCacheEntry{value: result, at: time.Now()}
+	engine.mu.Unlock()
+	return result, nil
 }
 
 func (engine *nativeEngine) nativeResolve(ctx context.Context, input nativeInput) (nativePlan, error) {

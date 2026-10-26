@@ -28,6 +28,7 @@ import 'remote_widgets.dart';
 import 'widgets.dart';
 import 'vip_icon.dart';
 import 'settings_screen.dart';
+import 'webdav_settings_screen.dart';
 import 'profiles_screen.dart';
 import 'search_input.dart';
 import 'sources_screen.dart';
@@ -678,8 +679,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _chooseCatalogView() async {
-    final selected = await chooseCatalogView(context, widget.store.catalogView);
+  Future<void> _chooseCatalogView([
+    CatalogSheetMode mode = CatalogSheetMode.all,
+  ]) async {
+    final selected = await chooseCatalogView(
+      context,
+      widget.store.catalogView,
+      mode: mode,
+    );
     if (selected != null && mounted) {
       await saveUserChange(
         context,
@@ -861,6 +868,13 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute<void>(
           builder: (_) => LiveScreen(store: widget.store),
+        ),
+      );
+    } else if (value == 'webdav') {
+      Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => WebDavSettingsScreen(store: widget.store),
         ),
       );
     } else if (value == 'settings') {
@@ -1090,9 +1104,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (!_showRecommendations)
                   GlassGroupItem(
                     icon: LucideIcons.arrowUpDown,
-                    tooltip: '排序与筛选 · ${widget.store.catalogView.sort.label}',
-                    highlighted: customView,
-                    onPressed: _chooseCatalogView,
+                    tooltip: '排序 · ${widget.store.catalogView.sort.label}',
+                    highlighted:
+                        widget.store.catalogView.sort != CatalogSort.source,
+                    onPressed: () => _chooseCatalogView(CatalogSheetMode.sort),
                   ),
                 if (!_showRecommendations)
                   GlassGroupItem(
@@ -1100,7 +1115,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: LucideIcons.listFilter,
                     tooltip: filterTooltip,
                     highlighted: filtersActive,
-                    onPressed: _chooseCatalogView,
+                    onPressed: () =>
+                        _chooseCatalogView(CatalogSheetMode.filters),
                   ),
                 GlassGroupItem(
                   key: const ValueKey('open-rankings'),
@@ -1349,6 +1365,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           const PopupMenuItem(
                             value: 'live',
                             child: Text('直播入口'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'webdav',
+                            child: Text('云端同步'),
                           ),
                           const PopupMenuItem(
                             value: 'users',

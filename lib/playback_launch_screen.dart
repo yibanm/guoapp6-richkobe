@@ -14,76 +14,15 @@ Future<void> openPlaybackDirectly(
   required Drama drama,
   required AppRepository repository,
   required LocalStore store,
-}) async {
-  final profileEpoch = store.profileEpoch;
-  try {
-    final detail = await repository.detail(drama);
-    if (!context.mounted || profileEpoch != store.profileEpoch) return;
-    final mergedDrama = repository.catalogUpdates
-        .current(drama)
-        .merge(detail.drama);
-    final merged = DramaDetail(
-      mergedDrama,
-      detail.episodes,
-      warning: detail.warning,
-    );
-    repository.catalogUpdates.publish(mergedDrama, retryCover: true);
-    await saveUserChange(context, () => store.refreshDrama(mergedDrama));
-    if (!context.mounted || profileEpoch != store.profileEpoch) return;
-    if (merged.episodes.isEmpty) {
-      throw AppFailure('暂时没有可播放的集数');
-    }
-    final watched = store.watched(mergedDrama.id);
-    final index = resumeEpisodeIndex(merged.episodes, watched);
-    final episode = merged.episodes[index];
-    if (episode.vip && mergedDrama.source != SourceSite.dsd.id) {
-      final accepted = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('这是一集 VIP 内容'),
-          content: const Text('站源可能只提供试看或限制播放。'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('尝试播放'),
-            ),
-          ],
-        ),
-      );
-      if (accepted != true || !context.mounted) return;
-    }
-    final position =
-        watched?.episode == episode.number && watched?.finished == false
-        ? watched!.position
-        : 0.0;
-    if (!context.mounted || profileEpoch != store.profileEpoch) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PlayerScreen(
-          detail: merged,
-          initialIndex: index,
-          initialPosition: position,
-          repository: repository,
-          store: store,
-        ),
-      ),
-    );
-  } catch (error) {
-    if (!context.mounted || profileEpoch != store.profileEpoch) return;
-    repository.catalogUpdates.publish(
-      repository.catalogUpdates.current(drama),
-      retryCover: true,
-    );
-    final message = error is AppFailure ? error.message : '暂时无法播放，请重试';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-}
+}) => Navigator.of(context).push(
+  MaterialPageRoute<void>(
+    builder: (_) => PlaybackLaunchScreen(
+      drama: drama,
+      repository: repository,
+      store: store,
+    ),
+  ),
+);
 
 class PlaybackLaunchScreen extends StatefulWidget {
   const PlaybackLaunchScreen({
@@ -105,23 +44,32 @@ class _PlaybackLaunchScreenState extends State<PlaybackLaunchScreen> {
   late final int _profileEpoch;
   int _generation = 0;
   String? _error;
+  int _elapsedSeconds = 0;
+  Timer? _tick;
 
   @override
   void initState() {
     super.initState();
     _profileEpoch = widget.store.profileEpoch;
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _elapsedSeconds++);
+    });
     unawaited(_load());
   }
 
   @override
   void dispose() {
+    _tick?.cancel();
     _generation++;
     super.dispose();
   }
 
   Future<void> _load() async {
     final generation = ++_generation;
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _elapsedSeconds = 0;
+    });
     try {
       final detail = await widget.repository.detail(widget.drama);
       if (!mounted ||
@@ -214,16 +162,23 @@ class _PlaybackLaunchScreenState extends State<PlaybackLaunchScreen> {
     body: SafeArea(
       top: false,
       child: _error == null
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    width: 180,
-                    child: LinearProgressIndicator(minHeight: 3),
+                  const SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(strokeWidth: 3),
                   ),
-                  SizedBox(height: 16),
-                  Text('正在进入播放'),
+                  const SizedBox(height: 16),
+                  Text(
+                    _elapsedSeconds < 3
+                        ? '正在获取剧集信息'
+                        : _elapsedSeconds < 8
+                        ? '源站响应较慢，仍在获取（已等待 $_elapsedSeconds 秒）'
+                        : '源站响应很慢（已等待 $_elapsedSeconds 秒），可返回重试或换一部',
+                  ),
                 ],
               ),
             )
