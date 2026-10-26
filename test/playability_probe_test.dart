@@ -67,5 +67,25 @@ void main() {
       playabilityOf: store.playabilityOf,
     );
     expect(onlyDead, hasLength(1));
+
+    // 4. 未探测（无记录）的剧在任何观看权限筛选下都隐藏，包括「免费完播」
+    const unprobed = Drama(id: 'hongguo:999', source: 'hongguo', title: '未探测');
+    for (final option in ['free', 'partial', 'locked', 'unplayable']) {
+      final rows = sortCatalog(
+        [unprobed],
+        CatalogView(playability: option),
+        playabilityOf: store.playabilityOf,
+      );
+      expect(rows, isEmpty, reason: '未探测剧不应出现在 $option 筛选结果');
+    }
+    // 集数完整度筛选同样隐藏未探测剧
+    expect(
+      sortCatalog(
+        [unprobed],
+        const CatalogView(completeness: 'complete'),
+        playabilityOf: store.playabilityOf,
+      ),
+      isEmpty,
+    );
   });
 }

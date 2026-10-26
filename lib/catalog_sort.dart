@@ -209,14 +209,13 @@ List<Drama> sortCatalog(
     if (view.playability.isNotEmpty || view.completeness.isNotEmpty) {
       final status = playabilityOf?.call(drama.id)?.status;
       if (view.playability.isNotEmpty) {
-        final wanted = view.playability;
-        if (status == null) {
-          if (wanted != 'free') return false;
-        } else if (status.name != wanted) {
-          return false;
-        }
+        // 「免费完播」等观看权限筛选只放行已探测且状态匹配的剧；
+        // 未探测（无记录）一律隐藏，避免把没验过的剧当能播的展示。
+        if (status == null || status.name != view.playability) return false;
       }
       if (view.completeness.isNotEmpty) {
+        // 未探测的剧集数完整度未知，一律隐藏
+        if (status == null) return false;
         final isIncomplete = status == PlayabilityStatus.incomplete;
         if (view.completeness == 'incomplete' && !isIncomplete) return false;
         if (view.completeness == 'complete' && isIncomplete) return false;
