@@ -605,7 +605,11 @@ class _HomeScreenState extends State<HomeScreen> {
         if (index >= targets.length) return;
         final drama = targets[index];
         try {
-          final detail = await widget.repository.detail(drama);
+          // 探测用独立短超时：源站挂起时不等 Go 侧 60s 全量超时，
+          // 超时按不可播处理，保证首轮标签在分钟级内出齐。
+          final detail = await widget.repository
+              .detail(drama)
+              .timeout(const Duration(seconds: 20));
           if (!mounted || _generation != generation) return;
           Playability? playability;
           if (detail.episodes.isEmpty) {
@@ -615,16 +619,20 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           } else {
             try {
-              final plan = await widget.repository.resolve(
-                drama,
-                detail.episodes.first,
-              );
+              final plan = await widget.repository
+                  .resolve(drama, detail.episodes.first)
+                  .timeout(const Duration(seconds: 15));
               await widget.repository.release(plan.session);
               playability = Playability.fromEpisodes(
                 detail.episodes,
                 detail.drama.episodes,
               );
             } on AppFailure {
+              playability = Playability(
+                status: PlayabilityStatus.unplayable,
+                checkedAt: DateTime.now().millisecondsSinceEpoch,
+              );
+            } on TimeoutException {
               playability = Playability(
                 status: PlayabilityStatus.unplayable,
                 checkedAt: DateTime.now().millisecondsSinceEpoch,
